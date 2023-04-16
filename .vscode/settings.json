@@ -1,0 +1,17 @@
+{
+	"files.exclude": {
+		"**/.git": true,
+		"**/.svn": true,
+		"**/.hg": true,
+		"**/CVS": true,
+		"**/.DS_Store": true,
+		"**/Thumbs.db": true,
+		"**/node_modules": true,
+		"**/.svelte-kit": true,
+		"**/package-lock.json": true
+	},
+	// "editor.codeLens": false,
+	"gitlens.codeLens.enabled": false,
+	"gitlens.codeLens.authors.enabled": false,
+	"gitlens.statusBar.enabled": false
+}

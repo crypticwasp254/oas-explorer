@@ -1,0 +1,53 @@
+@import 'reset.css';
+@import 'opencolor.css';
+@import 'color.css';
+@import 'shadows.css';
+@import 'fonts.css';
+@import 'typography.css';
+@import 'scrollbars.css';
+@import 'gradients.css';
+
+:root {
+	--radius-round: 1e5px;
+	--radius: 0.2rem;
+	--fontsize: 18px;
+	/* --basefontsize: 16px; */
+}
+
+/* z-index */
+:where(html) {
+	--layer-1: 1;
+	--layer-2: 2;
+	--layer-3: 3;
+	--layer-4: 4;
+	--layer-5: 5;
+	--layer-important: 2147483647;
+}
+
+html {
+	block-size: 100%;
+	background-color: var(--surface1);
+	color: var(--text1);
+	font-size: var(--fontsize);
+	scroll-behavior: smooth;
+}
+
+body {
+	min-block-size: 100%;
+	font-family: 'Jost', var(--font-family);
+	background-color: var(--surface1);
+	color: var(--text1);
+}
+
+a {
+	text-decoration: none;
+	color: var(--info);
+}
+
+/* divider */
+.divider {
+	height: 0.0625rem;
+	background: var(--textdim);
+	margin-block: 0.5rem;
+	/* margin-inline: calc(3 * 0.0625)rem; */
+}

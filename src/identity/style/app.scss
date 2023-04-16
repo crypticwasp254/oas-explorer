@@ -1,0 +1,10 @@
+// @use './scrollbars';
+@use './inputs';
+@use './buttons';
+@use './sidebar';
+@use './avatar.scss';
+
+.app {
+	min-height: 100vh;
+	width: 100%;
+}

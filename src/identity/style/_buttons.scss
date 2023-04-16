@@ -1,0 +1,57 @@
+button {
+	--button-padding: 0.25rem 0.75rem;
+	--button-bg: var(--surface4);
+	--button-color: var(--text1);
+
+	background-color: var(--button-bg);
+	border-radius: var(--radius);
+	color: var(--button-color);
+	border: 2px solid transparent;
+	cursor: pointer;
+	user-select: none;
+	font-size: var(--type-button);
+	padding: var(--button-padding);
+	display: flex;
+	align-items: center;
+
+	// states
+	&.primary {
+		--button-bg: var(--info);
+		--button-color: var(--text1-light);
+	}
+
+	&.outline {
+		--button-bg: transparent;
+		--button-color: var(--text1);
+		border: 2px solid var(--button-color);
+	}
+
+	&.flat {
+		--button-bg: transparent;
+		--button-color: var(--info);
+		border: none;
+
+		.icon svg {
+			fill: var(--info);
+		}
+	}
+
+	&.fluid {
+		width: 100%;
+		justify-content: center;
+	}
+
+	// components
+	.icon {
+		height: 100%;
+		display: grid;
+		place-items: center;
+		padding-inline: 0.3rem;
+
+		svg {
+			path #main-svg-path {
+				fill: var(--button-color);
+			}
+		}
+	}
+}

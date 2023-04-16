@@ -1,0 +1,66 @@
+.sidebar {
+	position: relative;
+	height: 100%;
+	.header,
+	.footer {
+		padding: 1rem;
+		width: 100%;
+	}
+
+	.elements {
+		padding-block-start: 1rem;
+		.element {
+			position: relative;
+			width: 100%;
+			padding: 0.5rem 1rem;
+			padding-inline-end: 0rem;
+			// margin: 0.4rem 0;
+			cursor: pointer;
+			border-inline-start: 2px solid transparent;
+			display: flex;
+			align-items: center;
+
+			// comps
+			.icon {
+				height: 100%;
+				display: grid;
+				place-items: center;
+			}
+
+			.label {
+				padding-inline-start: 1rem;
+				align-items: center;
+				flex-grow: 0.8;
+			}
+
+			.trail {
+				justify-self: end;
+				margin-inline-start: auto;
+			}
+
+			// states
+			&:hover {
+				background: var(--surface3);
+			}
+			&.active {
+				border-color: var(--info);
+				background-color: hsla(
+					var(--brand-hue) var(--brand-saturation) var(--brand-lightness) / 2%
+				);
+			}
+		}
+
+		.subheader {
+			text-transform: uppercase;
+			padding-inline-start: 1rem;
+			opacity: 0.5;
+			font-size: 0.8rem;
+		}
+	}
+
+	.footer {
+		position: absolute;
+		bottom: 0;
+		padding: 1rem;
+	}
+}

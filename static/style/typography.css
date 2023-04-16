@@ -1,0 +1,115 @@
+/* identity typography */
+
+:root {
+	--fonttracking: 0px;
+	/* todo calculate font tracking more dynamicaly */
+	--weight-light: 300;
+	--weight-normal: 400;
+	--weight-medium: 500;
+}
+
+/* type scale from material type system */
+
+h1,
+.display,
+.headline1 {
+	font-size: 6rem;
+	letter-spacing: -1.5px;
+	font-weight: var(--weight-light);
+	line-height: 6rem;
+}
+
+h2,
+.headline2 {
+	font-size: 3.75rem;
+	letter-spacing: -0.5px;
+	font-weight: var(--weight-light);
+	line-height: 3.75rem;
+}
+
+h3,
+.headline3 {
+	font-size: 3rem;
+	font-weight: var(--weight-normal);
+	line-height: 3.125rem;
+}
+
+h4,
+.headline4 {
+	font-size: 2.125rem;
+	letter-spacing: 0.25px;
+	font-weight: var(--weight-normal);
+	line-height: 2.5rem;
+}
+
+h5,
+.headline5 {
+	font-size: 1.5rem;
+	font-weight: var(--weight-normal);
+	line-height: 2rem;
+}
+
+h6,
+.headline6 {
+	font-size: 1.25rem;
+	letter-spacing: 0.15px;
+	font-weight: var(--weight-medium);
+	line-height: 2rem;
+}
+
+.subtitle1 {
+	font-size: 1rem;
+	letter-spacing: 0.15px;
+	font-weight: var(--weight-normal);
+	line-height: 1.25rem;
+}
+
+.subtitle2 {
+	font-size: 0.875rem;
+	letter-spacing: 0.1px;
+	font-weight: var(--weight-medium);
+	line-height: 1.375rem;
+}
+
+.body1 {
+	font-size: 1rem;
+	letter-spacing: 0.5px;
+	font-weight: var(--weight-normal);
+	line-height: 1.5rem;
+}
+
+.body2 {
+	font-size: 0.875rem;
+	letter-spacing: 0.25px;
+	font-weight: var(--weight-normal);
+	line-height: 1.25rem;
+}
+
+.type-button {
+	font-size: 0.875rem;
+	letter-spacing: 1.25px;
+	font-weight: var(--weight-medium);
+	line-height: 2.25rem;
+}
+
+.type-caption {
+	font-size: 0.75rem;
+	letter-spacing: 0.4px;
+	font-weight: var(--weight-normal);
+	line-height: 1.25rem;
+}
+
+.type-overline {
+	font-size: 0.625rem;
+	letter-spacing: 1.5px;
+	font-weight: var(--weight-normal);
+	text-transform: uppercase;
+	line-height: 2rem;
+}
+
+
+code {
+	font-family: var(--font-family-mono);
+	font-size: 0.875rem;
+	/* display: block; */
+}
