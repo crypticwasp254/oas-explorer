@@ -60,16 +60,10 @@
 <Content>
 	<div class="sidebar" slot="aside">
 		<div class="sidebar-header">
-			<a class="lg" href="/docs">
+			<div class="lg">
 				<div class="logo">
 					<CyxthLogo />
 				</div>
-				<p>OAS designer</p>
-			</a>
-		</div>
-
-		{#if activeView === 'design'}
-			<div class="elements">
 				{#if spec.info}
 					<div class="apiblock">
 						<div class="title">
@@ -77,7 +71,22 @@
 						</div>
 						<div class="version">{spec.info.version}</div>
 					</div>
+				{:else}
+					<p>OAS designer</p>
 				{/if}
+			</div>
+		</div>
+
+		{#if activeView === 'design'}
+			<div class="elements">
+				<!-- {#if spec.info}
+					<div class="apiblock">
+						<div class="title">
+							<span> {spec.info.title}</span>
+						</div>
+						<div class="version">{spec.info.version}</div>
+					</div>
+				{/if} -->
 
 				{#if spec.paths}
 					<div class="apiblock">
@@ -148,7 +157,7 @@
 					type="file"
 					bind:this={uploader}
 					on:change={fileChanged}
-					accept=".yaml, .yml, .json"
+					accept=".yaml, .yml"
 				/>
 			</div>
 		</div>
@@ -170,7 +179,7 @@
 
 	.sidebar-header {
 		display: flex;
-		padding: 1rem;
+
 		justify-content: space-between;
 		align-items: center;
 		position: sticky;
@@ -182,15 +191,20 @@
 
 		.lg {
 			display: flex;
-			color: var(--brand);
+			padding: 0.5rem 1rem;
+
 			align-items: center;
-			text-transform: capitalize;
-			gap: 0.5rem;
-			font-weight: 500;
+			gap: 1rem;
+			width: 100%;
+			// font-weight: 500;
 			cursor: pointer;
 
 			.logo {
-				height: 1.325rem;
+				height: 2.5rem;
+			}
+
+			.version {
+				font-size: 0.8rem;
 			}
 
 			p {

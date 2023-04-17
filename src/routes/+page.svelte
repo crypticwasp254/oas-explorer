@@ -39,7 +39,8 @@
 			language: 'yaml',
 			automaticLayout: true,
 			fontFamily: 'Inconsolata',
-			theme: 'cyxtheme'
+			theme: 'cyxtheme',
+			readOnly: true
 		});
 	};
 

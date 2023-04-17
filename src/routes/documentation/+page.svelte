@@ -28,13 +28,13 @@
 					</div>
 
 					<!-- params -->
-					{#if endpoint.parameters}
+					{#if endpoint?.parameters}
 						<h4 class="inner-header">parameter table</h4>
 						<ParameterTable parameters={endpoint.parameters} exclude={['description']} />
 					{/if}
 
 					<!-- reqbody -->
-					{#if endpoint.requestBody}
+					{#if endpoint?.requestBody}
 						<h4 class="inner-header">request body example</h4>
 						<Codebox
 							codeSnippet={JSON.stringify(endpoint.requestBody.samples[0]?.example, null, 2)}
@@ -42,7 +42,7 @@
 					{/if}
 
 					<!-- responses -->
-					{#if endpoint.responses}
+					{#if endpoint?.responses}
 						<h4 class="inner-header">responses example</h4>
 						<ResponseSelector responses={endpoint.responses} />
 					{/if}

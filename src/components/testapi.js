@@ -1,108 +1,50 @@
 export const testspec = `openapi: 3.0.0
 info:
-    version: '0.0.1'
-    title: 'abeona API'
-    description: 'abeona API'
+    version: '1.0.0'
+    title: 'cyxth API'
+    description: 'cyxth rest API'
     contact: {}
 servers:
-    - url: 'https://api.abeona.app'
-      description: 'abeona api server'
-    - url: 'http://localhost:8012'
-      description: 'abeona api development server'
+    - url: 'https://beta.cyxth.com/app_id/api'
+      description: 'development server'
+
 tags:
-    - name: auth
+    - name: users
+    - name: channels
+    - name: channel
 
 paths:
-    /auth/login:
+    /users:
         post:
-            description: 'login with username and password'
-            operationId: login
-            summary: 'user login'
+            description: 'create a user or users. send and array of Users returns the number of users created, will fail if any of the users supplied is already created'
+            operationId: create_users
+            summary: create users
             tags:
-                - auth
+                - users
             requestBody:
-                $ref: '#/components/requestBodies/Login'
-            responses:
-                '200':
-                    $ref: '#/components/responses/Token'
-                '400':
-                    $ref: '#/components/responses/Error'
-                '403':
-                    $ref: '#/components/responses/Error'
-                '500':
-                    $ref: '#/components/responses/Error'
-
-    /auth/register:
-        post:
-            description: 'register a user, this route has a token parameter that ensures invitation before register'
-            operationId: register
-            summary: register user
-            tags:
-                - auth
-            parameters:
-                - $ref: '#/components/parameters/TokenFromEmail'
-            requestBody:
-                $ref: '#/components/requestBodies/Register'
+                $ref: '#/components/requestBodies/NewUser'
             responses:
                 '203':
-                    $ref: '#/components/responses/Token'
+                    $ref: '#/components/responses/StatusReport'
                 '400':
                     $ref: '#/components/responses/Error'
                 '403':
                     $ref: '#/components/responses/Error'
                 '500':
                     $ref: '#/components/responses/Error'
-
-    /auth/logout:
         get:
-            description: 'user logout'
-            operationId: logout
-            summary: 'user logout'
+            description: get all users. this supports pagination and returns the first 50 users by default
+            operationId: users
+            summary: get users
             tags:
-                - auth
-            responses:
-                '200':
-                    $ref: '#/components/responses/StatusMessage'
-                '400':
-                    $ref: '#/components/responses/Error'
-                '403':
-                    $ref: '#/components/responses/Error'
-                '500':
-                    $ref: '#/components/responses/Error'
-
-    /auth/reset-password:
-        post:
-            description: 'request a password reset this sends a link to user email with reset token attached'
-            operationId: reset_password
-            summary: 'reset password'
-            tags:
-                - auth
-            requestBody:
-                $ref: '#/components/requestBodies/ResetRequest'
-            responses:
-                '200':
-                    $ref: '#/components/responses/StatusMessage'
-                '400':
-                    $ref: '#/components/responses/Error'
-                '403':
-                    $ref: '#/components/responses/Error'
-                '500':
-                    $ref: '#/components/responses/Error'
-
-    /auth/confirm-reset:
-        post:
-            description: 'confirm a password reset'
-            operationId: confirm_reset
-            summary: 'confirm password reset'
-            tags:
-                - auth
+                - users
             parameters:
-                - $ref: '#/components/parameters/TokenFromEmail'
-            requestBody:
-                $ref: '#/components/requestBodies/ResetConfirm'
+                - $ref: '#/components/parameters/StartingAfter'
+                - $ref: '#/components/parameters/Limit'
+
             responses:
                 '200':
-                    $ref: '#/components/responses/Token'
+                    $ref: '#/components/responses/Users'
                 '400':
                     $ref: '#/components/responses/Error'
                 '403':
@@ -110,38 +52,74 @@ paths:
                 '500':
                     $ref: '#/components/responses/Error'
 
-    /auth/verify:
-        post:
-            description: 'multifactor verification with email or phone'
-            operationId: verify_user
-            summary: 'verify email | phone'
+        delete:
+            description: delete users by supplying user ids, returns the number of users deleted
+            operationId: delete_users
+            summary: delete users
             tags:
-                - auth
+                - users
             requestBody:
-                # am reusing reset request since only email is needed
-                # might change it later for phone number verification
-                $ref: '#/components/requestBodies/ResetRequest'
+                $ref: '#/components/requestBodies/IdArray'
             responses:
                 '200':
-                    $ref: '#/components/responses/StatusMessage'
+                    $ref: '#/components/responses/StatusReport'
                 '400':
                     $ref: '#/components/responses/Error'
                 '403':
                     $ref: '#/components/responses/Error'
                 '500':
                     $ref: '#/components/responses/Error'
-    /auth/confirm-verify:
+
+    /users/moderate:
+        post:
+            description: moderate users, block users and give admin access
+            operationId: moderate_users
+            summary: moderate users
+            tags:
+                - users
+            requestBody:
+                $ref: '#/components/requestBodies/Moderate'
+            responses:
+                '200':
+                    $ref: '#/components/responses/StatusReport'
+                '400':
+                    $ref: '#/components/responses/Error'
+                '403':
+                    $ref: '#/components/responses/Error'
+                '500':
+                    $ref: '#/components/responses/Error'
+
+    /channels:
+        post:
+            description: create a channel or channels, to add initial members add a members array to any Channel object with user ids, they will be added asynchronously and automaticaly subscribed to the new channel and can optionaly receive a notification. the maximum number of channels that can be created at a time is 1000 with a maximum initial members of your max channel user setting.this operation is atomic and will fail if any of the channels already exist
+            operationId: create_channel
+            summary: create channels
+            tags:
+                - channels
+            requestBody:
+                $ref: '#/components/requestBodies/Channels'
+            responses:
+                '203':
+                    $ref: '#/components/responses/StatusReport'
+                '400':
+                    $ref: '#/components/responses/Error'
+                '403':
+                    $ref: '#/components/responses/Error'
+                '500':
+                    $ref: '#/components/responses/Error'
+
         get:
-            description: 'email confirmation from user inbox link'
-            operationId: confirm_verify
-            summary: 'confirm verification'
+            description: get all channels, returns first 50 users by default if the pagination query is not supplied
+            operationId: channels
+            summary: get channels
             tags:
-                - auth
+                - channels
             parameters:
-                - $ref: '#/components/parameters/TokenFromEmail'
+                - $ref: '#/components/parameters/StartingAfter'
+                - $ref: '#/components/parameters/Limit'
             responses:
                 '200':
-                    $ref: '#/components/responses/Token'
+                    $ref: '#/components/responses/Channels'
                 '400':
                     $ref: '#/components/responses/Error'
                 '403':
@@ -149,160 +127,343 @@ paths:
                 '500':
                     $ref: '#/components/responses/Error'
 
+        delete:
+            description: delete channels
+            operationId: delete_channels
+            summary: delete channels
+            tags:
+                - channels
+            requestBody:
+                $ref: '#/components/requestBodies/IdArray'
+            responses:
+                '200':
+                    $ref: '#/components/responses/StatusReport'
+                '400':
+                    $ref: '#/components/responses/Error'
+                '403':
+                    $ref: '#/components/responses/Error'
+                '500':
+                    $ref: '#/components/responses/Error'
+
+        put:
+            description: update a channel, a channel id must be supplied, all the other fields supplied will be updated
+            operationId: update_channels
+            summary: update channel
+            tags:
+                - channel
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/Channel'
+                        examples:
+                            channel:
+                                summary: update channel example
+                                value:
+                                    id: breakout
+                                    name: breakout
+                                    logo: 'https://logos.lq.com/rerju8u384bu4'
+
+            responses:
+                '200':
+                    description: users array.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Channel'
+                            examples:
+                                channel:
+                                    summary: update channel example
+                                    value:
+                                        id: breakout
+                                        name: breakout
+                                        logo: 'https://logos.lq.com/rerju8u384bu4'
+
+                '400':
+                    $ref: '#/components/responses/Error'
+                '403':
+                    $ref: '#/components/responses/Error'
+                '500':
+                    $ref: '#/components/responses/Error'
+
+    /channels/{id}/moderate:
+        parameters:
+            - name: id
+              in: path
+              description: channel id
+              required: true
+              schema:
+                  type: string
+
+        post:
+            description: moderate users in a channel
+            operationId: moderate_channel
+            summary: moderate channel
+            tags:
+                - channel
+            requestBody:
+                $ref: '#/components/requestBodies/Moderate'
+            responses:
+                '203':
+                    $ref: '#/components/responses/StatusReport'
+                '400':
+                    $ref: '#/components/responses/Error'
+                '403':
+                    $ref: '#/components/responses/Error'
+                '500':
+                    $ref: '#/components/responses/Error'
+
+    /channels/{id}/users:
+        parameters:
+            - name: id
+              in: path
+              description: channel id
+              required: true
+              schema:
+                  type: string
+
+        post:
+            description: create a user or users in channel,
+            operationId: add_users
+            summary: add members
+            tags:
+                - channel
+
+            requestBody:
+                $ref: '#/components/requestBodies/IdArray'
+
+            responses:
+                '200':
+                    $ref: '#/components/responses/StatusReport'
+                '401':
+                    $ref: '#/components/responses/Error'
+                '403':
+                    $ref: '#/components/responses/Error'
+                '500':
+                    $ref: '#/components/responses/Error'
+        get:
+            description: get all users in channel
+            operationId: users_in_channel
+            summary: get members
+            tags:
+                - channel
+            parameters:
+                - $ref: '#/components/parameters/StartingAfter'
+                - $ref: '#/components/parameters/Limit'
+            responses:
+                '200':
+                    $ref: '#/components/responses/Users'
+                '401':
+                    $ref: '#/components/responses/Error'
+                '403':
+                    $ref: '#/components/responses/Error'
+                '500':
+                    $ref: '#/components/responses/Error'
+
+        delete:
+            description: delete users in channel
+            operationId: delete_users_in_channel
+            summary: remove members
+            tags:
+                - channel
+            requestBody:
+                $ref: '#/components/requestBodies/IdArray'
+            responses:
+                '200':
+                    $ref: '#/components/responses/StatusReport'
+                '401':
+                    $ref: '#/components/responses/Error'
+                '403':
+                    $ref: '#/components/responses/Error'
+                '500':
+                    $ref: '#/components/responses/Error'
+
+security:
+    - BearerAuth: []
 components:
+    securitySchemes:
+        BearerAuth:
+            type: http
+            scheme: bearer
     parameters:
-        TokenFromEmail:
-            name: token
+        StartingAfter:
+            name: starting after
             in: query
-            description: a token parameter usually sent with a link to user email. this is used in invitation, verification and tracking for marketing
+            description: the id to start fetching from
             required: false
             schema:
                 type: string
-                example: 'ey78..jwttoken..isodiiu9090434'
+                example: 'cyxid890i9sduisd9'
+        Limit:
+            name: limit
+            in: query
+            description: the number of results to get
+            required: false
+            schema:
+                type: number
+                example: 50
+
     requestBodies:
-        Login:
+        NewUser:
+            required: true
+            content:
+                application/json:
+                    schema:
+                        type: array
+                        items:
+                            $ref: '#/components/schemas/User'
+                    examples:
+                        new_users:
+                            summary: an example of new user
+                            value:
+                                - id: '00uid0'
+                                  name: 'john doe'
+                                  mode: 300
+                                  metadata:
+                                      avatar: 'https://avtr.com/xyxerixcid'
+
+                                - id: '00uid0'
+                                  name: 'john doe'
+                                  mode: 300
+                                  metadata:
+                                      avatar: 'https://avtr.com/xyxerixcid'
+
+        Moderate:
             required: true
             content:
                 application/json:
                     schema:
                         type: object
                         required:
-                            - email
-                            - password
+                            - mode
+                            - ids
                         properties:
-                            email:
-                                description: user email
-                                type: string
-                                example: 'email@abeona.app'
-                            password:
-                                description: user password
-                                type: string
-                                example: 'abeona'
-
+                            mode:
+                                description: the new permissions
+                                type: number
+                                example: 600
+                            ids:
+                                description: the ids to moderate
+                                type: array
+                                items:
+                                    type: string
+                                example: ['uid0', 'uid1']
                     examples:
-                        login_example:
-                            summary: an example of login
+                        moderate:
+                            summary: moderate example
                             value:
-                                email: 'email@abeona.app'
-                                password: 'password'
-
-        Register:
+                                mode: 300
+                                ids: ['cyx8', 'cyx7']
+        IdArray:
             required: true
             content:
                 application/json:
                     schema:
-                        type: object
-                        required:
-                            - first name
-                            - last name
-                            - email
-                            - password
-                        properties:
-                            first name:
-                                description: first name
-                                type: string
-                                example: 'abeona'
-                            last name:
-                                description: last name
-                                type: string
-                                example: 'lname'
-                            email:
-                                description: email
-                                type: string
-                                example: 'email@abeona.app'
-                            password:
-                                description: password
-                                type: string
-                                example: 'password'
-
+                        $ref: '#/components/schemas/Ids'
                     examples:
-                        register_example:
-                            summary: an example of login
+                        id_array:
+                            summary: an example of an array of ids
                             value:
-                                first name: 'cliff'
-                                last name: 'manyara'
-                                email: 'example@abeona.app'
-                                password: 'password123'
+                                - idx98io090439d
+                                - uisfjdfdjire0r
+                                - wowcyxthiscool
 
-        ResetRequest:
+        Channels:
             required: true
             content:
                 application/json:
                     schema:
-                        type: object
-                        required:
-                            - email
-                        properties:
-                            email:
-                                type: string
-                                description: email to send reset token to
-                                example: example@abeona.app
-
+                        type: array
+                        items:
+                            $ref: '#/components/schemas/Channel'
                     examples:
-                        reset_request:
-                            summary: example of reset request
+                        channels:
+                            summary: an example of channels
                             value:
-                                email: example@abeona.app
+                                - id: breakout
+                                  name: breakout
+                                  logo: 'https://logos.lq.com/rerju8u384bu4'
+                                - id: maze0984
+                                  name: maze19
 
-        ResetConfirm:
-            required: true
-            content:
-                application/json:
-                    schema:
-                        type: object
-                        required:
-                            - password
-                        properties:
-                            password:
-                                type: string
-                                description: new password
-                                example: supersecretpassword
+    schemas:
+        Ids:
+            type: array
+            description: ids
+            items:
+                type: string
 
-                    examples:
-                        reset_request:
-                            summary: example of reset confirmation
-                            value:
-                                password: supersecretpassword
+        User:
+            type: object
+            description: user
+            required:
+                - id
+                - name
+
+            properties:
+                id:
+                    type: string
+                    description: 'unique user id'
+                    example: 'user_id'
+                name:
+                    type: string
+                    description: 'user name'
+                    example: 'user_name'
+                mode:
+                    type: number
+                    description: user access rights
+                metadata:
+                    type: object
+                    description: user metadata
+                    properties:
+                        avatar:
+                            type: string
+                            description: optional user avatar
+                            example: 'https://avatar.appid.com/user_avatar'
+
+        Channel:
+            type: object
+            description: channel
+            required:
+                - id
+                - name
+            properties:
+                id:
+                    type: string
+                    description: channel id
+                    example: 'tchanel'
+                name:
+                    type: string
+                    description: channel name
+                    example: 'tcahnnal'
+                logo:
+                    type: string
+                    description: channel logo
+                    example: 'https://yoursite.com/somer_avater.png'
 
     responses:
-        Token:
-            description: authentication and refresh tokens
+        # status report
+        StatusReport:
+            description: a status report usually the number of entities (channels,users,..) affected after a successiful create,delete,update
             content:
                 application/json:
                     schema:
                         type: object
                         properties:
-                            token:
-                                type: string
-                                description: 'success token'
-                                example: 'token_'
+                            status:
+                                type: number
+                                description: number of affected entities
+                                example: 6
 
                     examples:
-                        auth_token:
-                            summary: 'example of success token'
+                        status_report:
+                            summary: example with 6 affected entities
                             value:
-                                token: 'token_'
-
-        StatusMessage:
-            description: a generic status message for successiful 200 operation
-            content:
-                application/json:
-                    schema:
-                        type: object
-                        properties:
-                            message:
-                                type: string
-                                description: 'success message'
-                                example: 'logged out'
-
-                    examples:
-                        logged_out:
-                            summary: 'example of success message'
-                            value:
-                                message: 'logged out'
-
+                                status: 6
+        # errors
         Error:
-            description: an error occured, this is the main error object for 400-500 all http errors
+            description: generic error
             content:
                 application/json:
                     schema:
@@ -310,22 +471,53 @@ components:
                         properties:
                             message:
                                 type: string
-                                description: error message
-                                example: invalid email or password
-                            reason:
+                            type:
                                 type: string
-                                description: optional reason why this error happened
-                                example: invalid email or password
                             code:
                                 type: string
-                                description: internal error descriptor code for error tracking
-                                example: 'E0056'
-
                     examples:
-                        error:
-                            summary: an example of error
+                        error_out:
+                            summary: an error occured example
                             value:
-                                message: invalid email or password
-                                reason: invalid email or password
-                                code: E780FD
+                                message: 'an error occured'
+                                type: 'error_type'
+                                code: 'ERR_CODE'
+
+        # responses
+        Users:
+            description: users array.
+            content:
+                application/json:
+                    schema:
+                        type: array
+                        items:
+                            $ref: '#/components/schemas/User'
+                    examples:
+                        users:
+                            summary: users example
+                            value:
+                                - id: oncyxth89
+                                  name: cyx9
+                                  mode: 300
+                                  metadata:
+                                      avatar: https://heloo.lq.com/avtr90
+
+        Channels:
+            description: channels array
+            content:
+                application/json:
+                    schema:
+                        type: array
+                        items:
+                            $ref: '#/components/schemas/Channel'
+                    examples:
+                        channels:
+                            summary: an example of channels
+                            value:
+                                - id: breakout
+                                  name: breakout
+                                  logo: 'https://logos.lq.com/rerju8u384bu4'
+                                - id: maze0984
+                                  name: maze19
+
 `;
