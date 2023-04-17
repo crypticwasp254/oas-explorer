@@ -3,10 +3,13 @@
 	import CyxthLogo from '$identity/cyxthLogo.svelte';
 	import { onMount } from 'svelte';
 	import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
-	// import { walkSchema, getDefaultState } from 'oas-schema-walker';
 	import yaml from 'js-yaml';
+	import { sample } from 'openapi-sampler';
 
 	import { testspec } from '$components/testapi';
+	import ParameterTable from '$components/parameterTable.svelte';
+	import ResponseSelector from '$components/responseSelector.svelte';
+	import Codebox from '$components/codebox.svelte';
 
 	let specSource = testspec;
 	let uploader;
@@ -126,25 +129,146 @@
 					}
 				}
 
+				// follow refs
+				if (parameters) {
+					parameters = parameters.map((parameter) => {
+						let param = parameter;
+						if (parameter.$ref) {
+							param = followRef(data, parameter.$ref);
+						}
+
+						if (param.schema) {
+							if (param.schema.$ref) {
+								param.schema = followRef(data, param.schema.$ref);
+							}
+
+							param.type = param.schema.type;
+							delete param.schema;
+						}
+
+						return param;
+					});
+				}
+
+				// request bodies
+				let requestBody = null;
+				if (v.requestBody) {
+					requestBody = v.requestBody;
+					if (requestBody.$ref) {
+						requestBody = followRef(data, requestBody.$ref);
+					}
+
+					requestBody = {
+						samples: generateExample(requestBody.content, data)
+					};
+				}
+
+				/// response parsing
+				let responses = null;
+				if (v.responses) {
+					let res = Object.entries(v.responses).reduce((acc, keyval) => {
+						let [key, value] = keyval;
+						if (value.$ref) {
+							value = followRef(data, value.$ref);
+						}
+
+						value = {
+							samples: generateExample(value.content, data)
+						};
+
+						acc[key] = value;
+						return acc;
+					}, {});
+
+					responses = res;
+				}
+
+				/// curl example
+
 				let docssrc = {
 					summary: v?.summary,
 					description: v?.description,
 					method,
 					path: Object.keys(data.paths)?.[index],
 					parameters,
-					requestBody: v?.requestBody,
-					responses: v?.responses
+					requestBody,
+					responses
 				};
+
+				docssrc.curlExample = genCurl(docssrc);
 
 				target_tag?.endpoints.push(docssrc);
 			});
 		});
 
 		spec.tags = tags;
-		console.log(spec);
 	};
 
-	let tabs = ['design', 'documentation', 'test'];
+	const followRef = (data, ref) => {
+		if (!ref.startsWith('#')) {
+			return ref;
+		}
+
+		let rsps = ref.split('/').slice(1);
+		const rf = rsps.reduce((prev, curr) => {
+			return prev[curr];
+		}, data);
+
+		return rf;
+	};
+
+	const generateExample = (content, data) => {
+		let examples = [];
+		if (!content) return [];
+		for (const [key, value] of Object.entries(content)) {
+			let example = undefined;
+
+			if (value.examples) {
+				example = Object.values(value.examples)?.[0]?.value;
+			}
+
+			if (!example) {
+				example = sample(value.schema, { skipReadOnly: true }, data);
+			}
+
+			if (example) examples.push({ mediaType: key, example });
+		}
+
+		return examples;
+	};
+
+	const genCurl = (doc) => {
+		let command = `curl - X ${doc.method.toUpperCase()} ${doc.path}`;
+
+		if (doc.parameters) {
+			let qs = doc.parameters.reduce((acc, prm) => {
+				if (prm['in'] === 'query') {
+					if (acc.length) acc += '&';
+					acc += `${prm.name}={${prm.name}}`;
+				}
+				return acc;
+			}, '');
+			command += `?${qs}`;
+		}
+
+		if (doc.responses) {
+			let firstres = Object.values(doc.responses)[0];
+			let accept = firstres?.samples?.[0];
+
+			if (accept?.mediaType) {
+				command += `\n     - H Accept: ${accept.mediaType}`;
+			}
+		}
+
+		if (doc.requestBody) {
+			command += `\n     - H Content-Type: ${doc.requestBody.samples[0].mediaType}`;
+			command += `\n     - d '${JSON.stringify(doc.requestBody.samples[0].example)}'`;
+		}
+
+		return command;
+	};
+
+	let tabs = ['design', 'documentation'];
 
 	let activeView = 'design';
 
@@ -215,16 +339,6 @@
 						{tab}
 					</button>
 				{/each}
-				<!-- <button
-					class="tab"
-					class:active={activeView === 'design'}
-					on:click={() => switchView('design')}>design</button
-				>
-				<button
-					class="tab"
-					class:active={activeView === 'docs'}
-					on:click={() => switchView('design')}>documentation</button
-				> -->
 			</div>
 
 			<div class="right-menu">
@@ -258,6 +372,30 @@
 								<div class="description">
 									<p>{endpoint.description}</p>
 								</div>
+
+								<!-- params -->
+								{#if endpoint.parameters}
+									<h4 class="inner-header">parameter table</h4>
+									<ParameterTable parameters={endpoint.parameters} exclude={['description']} />
+								{/if}
+
+								<!-- reqbody -->
+								{#if endpoint.requestBody}
+									<h4 class="inner-header">request body example</h4>
+									<Codebox
+										codeSnippet={JSON.stringify(endpoint.requestBody.samples[0]?.example, null, 2)}
+									/>
+								{/if}
+
+								<!-- responses -->
+								{#if endpoint.responses}
+									<h4 class="inner-header">responses example</h4>
+									<ResponseSelector responses={endpoint.responses} />
+								{/if}
+
+								<!-- curl example -->
+								<h4 class="inner-header">curl example</h4>
+								<Codebox codeSnippet={endpoint.curlExample} />
 							</div>
 						{/each}
 					</div>
@@ -272,8 +410,12 @@
 		.header {
 			height: 3rem;
 			width: 100%;
-			padding-inline: 3rem;
+			padding-inline: 2rem;
 			display: flex;
+			position: sticky;
+			top: 0;
+			background: var(--surface1);
+			z-index: 2;
 
 			.menu,
 			.right-menu {
@@ -312,19 +454,24 @@
 				}
 
 				h1,
-				h2,
 				h3 {
 					padding-block: 0.875rem;
 				}
 
 				.apiendpoint {
 					padding-block: 0.175rem;
+					padding-block-end: 1rem;
 
 					.description {
 						padding-block-start: 0.475rem;
 						&::first-letter {
 							text-transform: capitalize;
 						}
+					}
+
+					.inner-header {
+						opacity: 0.75;
+						font-size: 1rem;
 					}
 				}
 			}
