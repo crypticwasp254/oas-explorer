@@ -15,7 +15,10 @@ const config = {
 			// pages: 'build',
 			// assets: 'build',
 			// fallback: null
-		})
+		}),
+		files: {
+			serviceWorker: 'src/sw.js'
+		}
 		// paths: {
 		// 	base: process.env.NODE_ENV === 'production' ? '/sveltekit-gh-pages' : ''
 		// }

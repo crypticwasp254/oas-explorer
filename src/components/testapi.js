@@ -1,4 +1,6 @@
-export const testspec = `openapi: 3.0.0
+export const testspec = `# this is a test api
+# upload your own specification to read documentation
+openapi: 3.0.0
 info:
     version: '1.0.0'
     title: 'cyxth API'

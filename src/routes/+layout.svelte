@@ -5,20 +5,9 @@
 	import Content from '$identity/content.svelte';
 	import CyxthLogo from '$identity/cyxthLogo.svelte';
 	import { onMount } from 'svelte';
-
 	import { source, specification } from '$components/store';
 
-	// views
-	let activeView = 'design';
-	let views = ['design', 'documentation'];
-	const switchView = async (view) => {
-		activeView = view;
-		if (activeView === 'design') {
-			goto('/');
-		} else {
-			goto(`/${view}`);
-		}
-	};
+	import { page } from '$app/stores';
 
 	// spec
 	let specSource = testspec;
@@ -54,6 +43,29 @@
 		});
 
 		reader.readAsText(file);
+	};
+
+	$: current_page = undefined;
+
+	$: {
+		let pages_d = $page.url.pathname.split('/');
+		let pages_t = pages_d[pages_d.length - 1];
+		if (pages_t === '') pages_t = 'design';
+		current_page = pages_t;
+	}
+
+	// views
+
+	let activeView = current_page === undefined ? 'design' : current_page;
+
+	let views = ['design', 'documentation', 'help'];
+	const switchView = async (view) => {
+		activeView = view;
+		if (activeView === 'design') {
+			goto('/');
+		} else {
+			goto(`/${view}`);
+		}
 	};
 </script>
 
@@ -118,7 +130,7 @@
 					{/each}
 				{/if}
 			</div>
-		{:else}
+		{:else if activeView === 'documentation'}
 			<div class="elements">
 				<div class="apiblock doc-side-block">
 					<div class="block-title">resources</div>
@@ -134,6 +146,10 @@
 						</div>
 					{/each}
 				</div>
+			</div>
+		{:else}
+			<div class="elements">
+				<h2 class="help-text">open api design and documentation help</h2>
 			</div>
 		{/if}
 	</div>
@@ -151,14 +167,16 @@
 				<!-- <div class="docs"> -->
 				<!-- <button on:click={() => (spec = generateDocs(specSource))}>regen</button> -->
 				<!-- </div> -->
-				<button class="button" on:click={uploadSpec}>upload schema</button>
-				<input
-					class="hidden"
-					type="file"
-					bind:this={uploader}
-					on:change={fileChanged}
-					accept=".yaml, .yml"
-				/>
+				<div class="btt">
+					<button class="button primary" on:click={uploadSpec}>upload spec</button>
+					<input
+						class="hidden"
+						type="file"
+						bind:this={uploader}
+						on:change={fileChanged}
+						accept=".yaml, .yml"
+					/>
+				</div>
 			</div>
 		</div>
 		<slot />
@@ -166,6 +184,28 @@
 </Content>
 
 <style lang="scss">
+	.elements {
+		h2.help-text {
+			font-size: 1.2rem;
+			line-height: 1.8rem;
+			font-weight: 400;
+			padding-block: 2rem;
+			text-transform: capitalize;
+		}
+	}
+
+	.btt {
+		height: 100%;
+		display: grid;
+		place-items: center;
+	}
+
+	button.primary {
+		background: var(--brand);
+		color: var(--surface1);
+		border-radius: 0.5rem;
+		padding: 0.5rem 1rem;
+	}
 	// sidebar
 	.sidebar {
 		position: relative;
