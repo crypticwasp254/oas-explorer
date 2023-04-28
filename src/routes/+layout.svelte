@@ -14,10 +14,14 @@
 	let spec = {};
 
 	onMount(() => {
-		spec = generateDocs(specSource);
+		// spec = generateDocs(specSource);
 
 		source.set(specSource);
-		specification.set(spec);
+		specification.set(generateDocs(specSource));
+	});
+
+	specification.subscribe((val) => {
+		spec = val;
 	});
 
 	//upload
@@ -32,13 +36,22 @@
 			return;
 		}
 
+		let supported_file_types = ['application/x-yaml', 'application/json'];
+		let supported = supported_file_types.find((x) => x === file.type);
+		if (!supported) {
+			return;
+			// TODO show error unsupported file type
+		}
+
 		const reader = new FileReader();
 		reader.addEventListener('load', (event) => {
 			// @ts-ignore
 			specSource = event.target.result;
-			spec = generateDocs(specSource);
-
 			source.set(specSource);
+
+			// do lints here
+			spec = generateDocs(specSource, file.type);
+
 			specification.set(spec);
 		});
 
@@ -58,7 +71,7 @@
 
 	let activeView = current_page === undefined ? 'design' : current_page;
 
-	let views = ['design', 'documentation', 'help'];
+	let views = ['design', 'documentation'];
 	const switchView = async (view) => {
 		activeView = view;
 		if (activeView === 'design') {
@@ -174,7 +187,7 @@
 						type="file"
 						bind:this={uploader}
 						on:change={fileChanged}
-						accept=".yaml, .yml"
+						accept=".yaml, .yml, .json"
 					/>
 				</div>
 			</div>
@@ -204,7 +217,7 @@
 		background: var(--brand);
 		color: var(--surface1);
 		border-radius: 0.5rem;
-		padding: 0.5rem 1rem;
+		padding: 0.25rem 0.75rem;
 	}
 	// sidebar
 	.sidebar {

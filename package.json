@@ -30,11 +30,17 @@
 	},
 	"type": "module",
 	"dependencies": {
+		"@exodus/schemasafe": "^1.0.0",
+		"@stoplight/spectral-core": "^1.18.0",
+		"@stoplight/spectral-functions": "^1.7.2",
+		"@stoplight/spectral-parsers": "^1.0.2",
 		"js-yaml": "^4.1.0",
+		"json-pointer": "^0.6.2",
 		"monaco-editor": "^0.37.1",
-		"oas-schema-walker": "^1.1.5",
+		"oas-validator": "^5.0.8",
 		"openapi-sampler": "^1.3.1",
 		"prismjs": "^1.29.0",
+		"should": "^13.2.3",
 		"xml-js": "^1.6.11"
 	}
 }

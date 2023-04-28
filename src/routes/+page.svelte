@@ -1,13 +1,18 @@
 <script>
 	import { onMount } from 'svelte';
 	import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
-	import { source } from '$components/store';
+	import { source, specification } from '$components/store';
+	import { generateDocs, lintDoc } from '$components/gendoc';
 
 	let specSource = '';
 
 	let editorContainer;
+
 	let Monaco;
+
 	let editor;
+
+	let model;
 
 	onMount(async () => {
 		await loadMonaco();
@@ -34,22 +39,59 @@
 			}
 		});
 
+		model = Monaco.editor.createModel(specSource, 'yaml');
+
 		editor = Monaco.editor.create(editorContainer, {
 			value: specSource,
 			language: 'yaml',
+			model,
 			automaticLayout: true,
 			fontFamily: 'Inconsolata',
 			theme: 'cyxtheme',
-			readOnly: true
+
+			scrollbar: {
+				useShadows: false,
+				horizontal: 'hidden'
+			}
+		});
+
+		model.onDidChangeContent(() => {
+			let value = editor.getValue();
+			source.set(value);
 		});
 	};
 
 	source.subscribe((val) => {
 		specSource = val;
 		if (editor) {
-			editor.setValue(specSource);
+			// editor.setValue(specSource);
+			lintDoc(specSource)
+				.then((errs) => {
+					validate(model, errs);
+					if (!errs.length) {
+						specification.set(generateDocs(val));
+					}
+				})
+				.catch((err) => {
+					console.log('the linter just failed', err);
+				});
 		}
 	});
+
+	const validate = (model, lints) => {
+		let markers = lints.map((lint) => {
+			return {
+				message: lint.message,
+				severity: Monaco.MarkerSeverity.Error,
+				startLineNumber: lint.range.start.line + 1,
+				startColumn: lint.range.start.character,
+				endLineNumber: lint.range.end.line,
+				endColumn: lint.range.end.character
+			};
+		});
+
+		Monaco.editor.setModelMarkers(model, 'owner', markers);
+	};
 </script>
 
 <div bind:this={editorContainer} class="designer" />
