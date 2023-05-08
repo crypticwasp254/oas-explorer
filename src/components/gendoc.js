@@ -5,16 +5,56 @@
  * this is currently put together roughly for svelte hack
  * i will refine it much better later
  */
-
 import { sample } from 'openapi-sampler';
 import yaml from 'js-yaml';
+import JsonPointer from 'json-pointer';
+import { Spectral } from '@stoplight/spectral-core';
+import { truthy } from '@stoplight/spectral-functions';
 
-export const generateDocs = (specSource) => {
+/// beter gendoc
+// lint first ++
+// if no linter error -> gendocs
+// collect tags -> walk the schema till we fail
+// on fail lint the line and continue or halt | generate a suggestion [oh yeah]
+
+export const lintDoc = (specSource) => {
+	const spectral = new Spectral();
+	spectral.setRuleset({
+		// this will be our ruleset
+		rules: {
+			'no-empty-description': {
+				given: '$..description',
+				message: 'description must not be empty',
+				then: {
+					function: truthy
+				}
+			}
+		}
+	});
+
+	return spectral.run(specSource);
+};
+
+export const generateDocs = (specSource, fileType = 'application/x-yaml') => {
+	// const mydoc = new Document()
 	let spec = {};
 
+	let data = {};
+	if (fileType === 'application/x-yaml') {
+		data = yaml.load(specSource);
+	} else {
+		data = JSON.parse(specSource);
+	}
+
+	// const oas = new Oas(data);
+	// console.log(oas.getTags());
+
+	// const oas_linter = new OasLinter();
+	// oas_linter.loadDefaultRules();
+	// let x = oas_linter.lint('schema', data, 'parameter', { metadata: {}, verbose: 2 });
+	// console.log(x);
+
 	// smh convert this yaml file to docs
-	console.log('generating docs');
-	let data = yaml.load(specSource);
 	spec.info = data.info;
 
 	spec.paths = Object.keys(data.paths).map((k) => {
@@ -33,10 +73,16 @@ export const generateDocs = (specSource) => {
 		};
 	});
 
-	let tags = data.tags.map((v) => {
+	let tags = [];
+	data?.tags?.map((v) => {
 		v.endpoints = [];
 		return v;
 	});
+
+	// let tags = data.tags.map((v) => {
+	// 	v.endpoints = [];
+	// 	return v;
+	// });
 
 	Object.values(data.paths).forEach((val, index) => {
 		let path_global_params = undefined;
@@ -93,9 +139,11 @@ export const generateDocs = (specSource) => {
 					requestBody = followRef(data, requestBody.$ref);
 				}
 
-				requestBody = {
-					samples: generateExample(requestBody.content, data)
-				};
+				if (requestBody?.content) {
+					requestBody = {
+						samples: generateExample(requestBody.content, data)
+					};
+				}
 			}
 
 			/// response parsing
@@ -146,12 +194,12 @@ const followRef = (data, ref) => {
 		return ref;
 	}
 
-	let rsps = ref.split('/').slice(1);
-	const rf = rsps.reduce((prev, curr) => {
-		return prev[curr];
-	}, data);
-
-	return rf;
+	try {
+		return JsonPointer.get(data, ref.substring(1));
+	} catch (err) {
+		console.log('an error getting ref', err);
+		return ref;
+	}
 };
 
 const generateExample = (content, data) => {
@@ -165,7 +213,12 @@ const generateExample = (content, data) => {
 		}
 
 		if (!example) {
-			example = sample(value.schema, { skipReadOnly: true }, data);
+			try {
+				example = sample(value.schema, { skipReadOnly: true }, data);
+			} catch (e) {
+				console.log('error sampling', e);
+				example = '? invalid';
+			}
 		}
 
 		if (example) examples.push({ mediaType: key, example });
@@ -197,7 +250,7 @@ const genCurl = (doc) => {
 		}
 	}
 
-	if (doc.requestBody) {
+	if (doc?.requestBody?.samples) {
 		command += `\n     - H Content-Type: ${doc.requestBody.samples[0].mediaType}`;
 		command += `\n     - d '${JSON.stringify(doc.requestBody.samples[0].example)}'`;
 	}
