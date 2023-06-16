@@ -3,25 +3,40 @@
 	import ParameterTable from '$components/parameterTable.svelte';
 	import ResponseSelector from '$components/responseSelector.svelte';
 	import { specification } from '$components/store';
+	import { onDestroy, onMount } from 'svelte';
 
 	let spec = { tags: [] };
 
-	specification.subscribe((sp) => {
+	let unsub = specification.subscribe((sp) => {
 		// @ts-ignore
 		spec = sp;
 	});
+
+	onDestroy(() => {
+		unsub();
+	});
+
+	const getEndpoints = (tag) => {
+		// @ts-ignore
+		let mapper = spec?.tags?.mapper?.get(tag);
+		if (mapper) {
+			return Array.from(mapper).map((id) => spec.methodBodies[id]);
+		} else {
+			return [];
+		}
+	};
 </script>
 
 <div class="docs">
 	{#each spec.tags as tag}
 		<div class="apinamespace">
 			<h1 class="apitag">{tag.name}</h1>
-			{#each tag.endpoints as endpoint}
+			{#each getEndpoints(tag.name) as endpoint}
 				<div class="apiendpoint">
 					<h3 class="headline5">{endpoint.summary}</h3>
 					<code class="">
 						<span class="http-method method-{endpoint.method}">{endpoint.method}</span>
-						<span>{endpoint.path}</span>
+						<span>{endpoint.route}</span>
 					</code>
 					<div class="description">
 						<p>{endpoint.description}</p>
@@ -35,21 +50,25 @@
 
 					<!-- reqbody -->
 					{#if endpoint?.requestBody}
-						<h4 class="inner-header">request body example</h4>
-						<Codebox
-							codeSnippet={JSON.stringify(endpoint.requestBody.samples[0]?.example, null, 2)}
-						/>
+						{#if endpoint?.requestBody?.samples.length}
+							<h4 class="inner-header">Example Request Body</h4>
+							<Codebox
+								codeSnippet={JSON.stringify(endpoint.requestBody.samples[0]?.example, null, 2)}
+							/>
+						{:else}
+							<p>no request body examples</p>
+						{/if}
 					{/if}
 
 					<!-- responses -->
 					{#if endpoint?.responses}
-						<h4 class="inner-header">responses example</h4>
+						<h4 class="inner-header">Example Responses</h4>
 						<ResponseSelector responses={endpoint.responses} />
 					{/if}
 
 					<!-- curl example -->
-					<h4 class="inner-header">curl example</h4>
-					<Codebox codeSnippet={endpoint.curlExample} />
+					<h4 class="inner-header">Curl Command</h4>
+					<Codebox codeSnippet={endpoint.curl} />
 				</div>
 			{/each}
 		</div>

@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
 	import { source, specification } from '$components/store';
-	import { generateDocs, lintDoc } from '$components/gendoc';
+	import { ensureJson, generateDocs, lintDoc } from '$components/gendoc';
 
 	let specSource = '';
 
@@ -14,8 +14,18 @@
 
 	let model;
 
+	let loaded = false;
+
 	onMount(async () => {
+		if (specSource === '') {
+			specSource = $source;
+		}
+
+		if (specSource === '') {
+			specSource = '# start typing new oas or upload to read documentation';
+		}
 		await loadMonaco();
+		loaded = true;
 	});
 
 	const loadMonaco = async () => {
@@ -62,20 +72,23 @@
 	};
 
 	source.subscribe((val) => {
-		specSource = val;
+		// let now = new Date();
 		if (editor) {
-			// editor.setValue(specSource);
-			lintDoc(specSource)
+			lintDoc(val)
 				.then((errs) => {
 					validate(model, errs);
 					if (!errs.length) {
-						specification.set(generateDocs(val));
+						specification.set(generateDocs(ensureJson(val)));
 					}
 				})
-				.catch((err) => {
-					console.log('the linter just failed', err);
+				.catch((_err) => {
+					console.log('the linter just failed');
+					// ignore and generate
+					specification.set(generateDocs(ensureJson(val)));
 				});
 		}
+		// @ts-ignore
+		// console.log('took mses => ', new Date() - now);
 	});
 
 	const validate = (model, lints) => {
@@ -94,10 +107,18 @@
 	};
 </script>
 
+{#if !loaded}
+	<p class="loading-indicator">loading doc editor</p>
+{/if}
+
 <div bind:this={editorContainer} class="designer" />
 
 <style lang="scss">
 	.designer {
 		height: calc(100vh - 3rem);
+	}
+
+	.loading-indicator {
+		padding-inline: 2rem;
 	}
 </style>

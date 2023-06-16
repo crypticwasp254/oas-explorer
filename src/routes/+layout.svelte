@@ -1,24 +1,15 @@
 <script>
 	import { goto } from '$app/navigation';
-	import { generateDocs } from '$components/gendoc';
-	import { testspec } from '$components/testapi';
 	import Content from '$identity/content.svelte';
 	import CyxthLogo from '$identity/cyxthLogo.svelte';
-	import { onMount } from 'svelte';
 	import { source, specification } from '$components/store';
 
 	import { page } from '$app/stores';
+	import { ensureJson, generateDocs } from '$components/gendoc';
 
 	// spec
-	let specSource = testspec;
+	let specSource = '';
 	let spec = {};
-
-	onMount(() => {
-		// spec = generateDocs(specSource);
-
-		source.set(specSource);
-		specification.set(generateDocs(specSource));
-	});
 
 	specification.subscribe((val) => {
 		spec = val;
@@ -48,28 +39,22 @@
 			// @ts-ignore
 			specSource = event.target.result;
 			source.set(specSource);
-
-			// do lints here
-			spec = generateDocs(specSource, file.type);
-
-			specification.set(spec);
+			specification.set(generateDocs(ensureJson(specSource)));
+			goto('/documentation');
 		});
 
 		reader.readAsText(file);
 	};
 
-	$: current_page = undefined;
+	let activeView = 'design';
 
-	$: {
-		let pages_d = $page.url.pathname.split('/');
-		let pages_t = pages_d[pages_d.length - 1];
-		if (pages_t === '') pages_t = 'design';
-		current_page = pages_t;
+	// sync active element with active page
+	let pth = $page.url.pathname.split('/')[1];
+	if (pth === '') {
+		activeView = 'design';
+	} else {
+		activeView = pth;
 	}
-
-	// views
-
-	let activeView = current_page === undefined ? 'design' : current_page;
 
 	let views = ['design', 'documentation'];
 	const switchView = async (view) => {
@@ -92,9 +77,9 @@
 				{#if spec.info}
 					<div class="apiblock">
 						<div class="title">
-							<span> {spec.info.title}</span>
+							<span> {spec.info.title || 'api title'}</span>
 						</div>
-						<div class="version">{spec.info.version}</div>
+						<div class="version">{spec.info.version || 'api version'}</div>
 					</div>
 				{:else}
 					<p>OAS designer</p>
@@ -104,16 +89,7 @@
 
 		{#if activeView === 'design'}
 			<div class="elements">
-				<!-- {#if spec.info}
-					<div class="apiblock">
-						<div class="title">
-							<span> {spec.info.title}</span>
-						</div>
-						<div class="version">{spec.info.version}</div>
-					</div>
-				{/if} -->
-
-				{#if spec.paths}
+				{#if spec?.paths?.length}
 					<div class="apiblock">
 						<div class="block-title">paths</div>
 						{#each spec.paths as path}
@@ -146,23 +122,19 @@
 		{:else if activeView === 'documentation'}
 			<div class="elements">
 				<div class="apiblock doc-side-block">
-					<div class="block-title">resources</div>
-					{#each spec.tags as tag}
+					<div class="block-title">routes</div>
+					{#each spec?.tags as tag}
 						<div class="doc-endpoint-tag">
 							{tag.name}
 						</div>
 
 						<div class="doc-endpoints">
-							{#each tag.endpoints as endpoint}
-								<div class="doc-endpoint">{endpoint.summary}</div>
+							{#each Array.from(spec?.tags?.mapper?.get(tag.name) || []) as endpoint}
+								<div class="doc-endpoint">{spec?.methodBodies[endpoint].summary}</div>
 							{/each}
 						</div>
 					{/each}
 				</div>
-			</div>
-		{:else}
-			<div class="elements">
-				<h2 class="help-text">open api design and documentation help</h2>
 			</div>
 		{/if}
 	</div>
@@ -197,16 +169,6 @@
 </Content>
 
 <style lang="scss">
-	.elements {
-		h2.help-text {
-			font-size: 1.2rem;
-			line-height: 1.8rem;
-			font-weight: 400;
-			padding-block: 2rem;
-			text-transform: capitalize;
-		}
-	}
-
 	.btt {
 		height: 100%;
 		display: grid;
@@ -219,6 +181,7 @@
 		border-radius: 0.5rem;
 		padding: 0.25rem 0.75rem;
 	}
+
 	// sidebar
 	.sidebar {
 		position: relative;

@@ -1,204 +1,232 @@
-// @ts-nocheck
-
-/**
- * doc gen
- * this is currently put together roughly for svelte hack
- * i will refine it much better later
- */
-import { sample } from 'openapi-sampler';
+//FIXME optimzation target
 import yaml from 'js-yaml';
 import JsonPointer from 'json-pointer';
+import { sample } from 'openapi-sampler';
 import { Spectral } from '@stoplight/spectral-core';
 import { truthy } from '@stoplight/spectral-functions';
 
-/// beter gendoc
-// lint first ++
-// if no linter error -> gendocs
-// collect tags -> walk the schema till we fail
-// on fail lint the line and continue or halt | generate a suggestion [oh yeah]
+const httpMethods = new Set(['post', 'get', 'put', 'delete', 'options']);
 
-export const lintDoc = (specSource) => {
-	const spectral = new Spectral();
-	spectral.setRuleset({
-		// this will be our ruleset
-		rules: {
-			'no-empty-description': {
-				given: '$..description',
-				message: 'description must not be empty',
-				then: {
-					function: truthy
-				}
+// spectral linter
+const spectral = new Spectral();
+spectral.setRuleset({
+	rules: {
+		'no-empty-description': {
+			given: '$..description',
+			message: 'description must not be empty',
+			then: {
+				function: truthy
 			}
 		}
-	});
+	}
+});
 
+export const lintDoc = (specSource) => {
 	return spectral.run(specSource);
 };
 
-export const generateDocs = (specSource, fileType = 'application/x-yaml') => {
-	// const mydoc = new Document()
-	let spec = {};
-
-	let data = {};
+export const ensureJson = (specSource, fileType = 'application/x-yaml') => {
 	if (fileType === 'application/x-yaml') {
-		data = yaml.load(specSource);
+		return yaml.load(specSource);
 	} else {
-		data = JSON.parse(specSource);
+		return JSON.parse(specSource);
+	}
+}
+
+export const generateDocs = (data) => {
+	data = data === null || data === undefined ? "" : data
+
+	let spec = {
+		openapi: '3.0.0',
+		info: undefined,
+		servers: [],
+		tags: [],
+		paths: [],
+		components: [],
+		methodBodies: []
+	};
+
+	// info
+	if (data.info) {
+		spec.info = data.info;
 	}
 
-	// const oas = new Oas(data);
-	// console.log(oas.getTags());
+	// servers
+	if (data.servers) {
+		spec.servers = data.servers
+	}
 
-	// const oas_linter = new OasLinter();
-	// oas_linter.loadDefaultRules();
-	// let x = oas_linter.lint('schema', data, 'parameter', { metadata: {}, verbose: 2 });
-	// console.log(x);
+	//FIXME placeholder tags
+	let tagMap = new Map();
+	if (data.tags) {
+		spec.tags = data.tags
+		spec.tags.forEach(tag => {
+			tagMap.set(tag?.name, new Set([]))
+		})
+	}
 
-	// smh convert this yaml file to docs
-	spec.info = data.info;
+	// paths
+	if (data.paths && typeof (data.paths) === 'object') {
+		let lpaths = Object.keys(data.paths).map((route) => {
+			let operations = data.paths[route];
 
-	spec.paths = Object.keys(data.paths).map((k) => {
-		return {
-			route: k,
-			methods: Object.keys(data.paths[k]).filter((ke) =>
-				['post', 'get', 'put', 'delete', 'options'].includes(ke)
-			)
-		};
-	});
+			if (operations && typeof (operations) === 'object') {
+				let routeParameters = null;
+				let routeMethods = [];
 
-	spec.servers = spec.components = Object.keys(data.components).map((k) => {
-		return {
-			title: k,
-			values: Object.keys(data.components[k])
-		};
-	});
-
-	let tags = [];
-	data?.tags?.map((v) => {
-		v.endpoints = [];
-		return v;
-	});
-
-	// let tags = data.tags.map((v) => {
-	// 	v.endpoints = [];
-	// 	return v;
-	// });
-
-	Object.values(data.paths).forEach((val, index) => {
-		let path_global_params = undefined;
-		let methods = Object.keys(val);
-		if (val.parameters) {
-			path_global_params = val.parameters;
-		}
-
-		// methods
-		Object.values(val).forEach((v, vindex) => {
-			// only supports one tag per operation
-			let tag = v.tags?.[0];
-			let target_tag = tags.filter((tg) => tg.name === tag)[0];
-
-			let method = methods?.[vindex];
-
-			/// parameter parsing
-			let parameters = null;
-			if (path_global_params) parameters = path_global_params;
-			if (v.parameters) {
-				if (parameters) {
-					parameters = [...parameters, ...v.parameters];
-				} else {
-					parameters = v.parameters;
-				}
-			}
-
-			// follow refs
-			if (parameters) {
-				parameters = parameters.map((parameter) => {
-					let param = parameter;
-					if (parameter.$ref) {
-						param = followRef(data, parameter.$ref);
+				Object.entries(operations).forEach(([method, methodbody]) => {
+					if (method === 'parameters') {
+						routeParameters = operations[method];
 					}
 
-					if (param.schema) {
-						if (param.schema.$ref) {
-							param.schema = followRef(data, param.schema.$ref);
-						}
+					if (httpMethods.has(method)) {
+						routeMethods.push(method);
+						const methodBody = createMethodBody(route, method, methodbody, data, routeParameters);
 
-						param.type = param.schema.type;
-						delete param.schema;
+						// FIXME find better ways to do this
+						methodBody.tags.forEach(tag => {
+							if (tagMap.has(tag)) {
+								tagMap.get(tag).add(spec.methodBodies.length);
+							} else {
+								spec.tags.push({ name: tag })
+								tagMap.set(tag, new Set([spec.methodBodies.length]))
+							}
+						})
+
+						spec.methodBodies.push(methodBody);
 					}
+				})
 
-					return param;
-				});
-			}
-
-			// request bodies
-			let requestBody = null;
-			if (v.requestBody) {
-				requestBody = v.requestBody;
-				if (requestBody.$ref) {
-					requestBody = followRef(data, requestBody.$ref);
+				let rt = {
+					route,
+					methods: routeMethods,
 				}
 
-				if (requestBody?.content) {
-					requestBody = {
-						samples: generateExample(requestBody.content, data)
-					};
-				}
+				return rt
 			}
 
-			/// response parsing
-			let responses = null;
-			if (v.responses) {
-				let res = Object.entries(v.responses).reduce((acc, keyval) => {
-					let [key, value] = keyval;
-					if (value.$ref) {
-						value = followRef(data, value.$ref);
-					}
-
-					value = {
-						samples: generateExample(value.content, data)
-					};
-
-					acc[key] = value;
-					return acc;
-				}, {});
-
-				responses = res;
+			return {
+				route,
+				methods: []
 			}
+		})
 
-			/// curl example
+		spec.paths = lpaths
+		// @ts-ignore
+		spec.tags.mapper = tagMap;
+	}
 
-			let docssrc = {
-				summary: v?.summary,
-				description: v?.description,
-				method,
-				path: Object.keys(data.paths)?.[index],
-				parameters,
-				requestBody,
-				responses
-			};
-
-			docssrc.curlExample = genCurl(docssrc);
-
-			target_tag?.endpoints.push(docssrc);
-		});
-	});
-
-	spec.tags = tags;
+	if (data.components) {
+		spec.components = Object.keys(data.components).map((k) => {
+			return {
+				title: k,
+				values: Object.keys(data.components[k])
+			}
+		})
+	}
 
 	return spec;
 };
 
+
+const createMethodBody = (route, method, methodData, spec, topLevelRouteParameters = null) => {
+	let methodBody = {
+		route,
+		method,
+		operationId: methodData?.operationId || '[?error] missing operation id',
+		summary: methodData?.summary || '[?error] missing method summary',
+		description: methodData?.description || '[?error] missing description',
+		tags: new Set([]),
+
+		parameters: undefined,
+		requestBody: undefined,
+		responses: undefined,
+		curl: undefined
+	}
+
+	if (!methodData) {
+		return methodBody
+	}
+
+	// tags
+	if (methodData?.tags && methodData.tags.length) {
+		methodBody.tags = new Set(methodData.tags)
+	}
+
+	// parse method parameters
+	if (methodData.parameters || topLevelRouteParameters) {
+		let parameters = [];
+		if (topLevelRouteParameters) parameters = topLevelRouteParameters;
+		if (methodData.parameters) {
+			parameters = [...parameters, ...methodData.parameters]
+		}
+
+		parameters = parameters.map(parameter => {
+			if (parameter.$ref) {
+				parameter = followRef(spec, parameter.$ref);
+			}
+
+			if (parameter.schema) {
+				if (parameter.schema.$ref) {
+					parameter.schema = followRef(spec, parameter.schema.$ref);
+				}
+			}
+
+			return parameter;
+		})
+
+		methodBody.parameters = parameters;
+	}
+
+	// request body
+	if (methodData.requestBody) {
+		let requestBody = methodData.requestBody;
+		if (requestBody.$ref) {
+			requestBody = followRef(spec, requestBody.$ref);
+		}
+
+		if (requestBody?.content) {
+			// TODO we only care about samples here
+			requestBody = { samples: generateExample(requestBody?.content, methodData) };
+		}
+
+		methodBody.requestBody = requestBody;
+	}
+
+	// responses
+	if (methodData.responses) {
+		let responses = Object.entries(methodData.responses).reduce((acc, [key, value]) => {
+			if (value.$ref) {
+				value = followRef(spec, value.$ref);
+			}
+
+			// TODO we only care about sample here
+			value = {
+				samples: generateExample(value?.content, methodData)
+			};
+
+			acc[key] = value;
+			return acc;
+		}, {});
+
+		methodBody.responses = responses
+	}
+
+	methodBody.curl = generateCurl(methodBody);
+
+	return methodBody;
+}
+
 const followRef = (data, ref) => {
 	if (!ref.startsWith('#')) {
-		return ref;
+		return { "refNotDefined": ref };
 	}
 
 	try {
 		return JsonPointer.get(data, ref.substring(1));
 	} catch (err) {
 		console.log('an error getting ref', err);
-		return ref;
+		return { "refNotDefined": ref };
 	}
 };
 
@@ -208,16 +236,16 @@ const generateExample = (content, data) => {
 	for (const [key, value] of Object.entries(content)) {
 		let example = undefined;
 
-		if (value.examples) {
+		if (value?.examples) {
 			example = Object.values(value.examples)?.[0]?.value;
 		}
 
 		if (!example) {
 			try {
 				example = sample(value.schema, { skipReadOnly: true }, data);
-			} catch (e) {
-				console.log('error sampling', e);
-				example = '? invalid';
+			} catch (_e) {
+				console.log('error sampling');
+				example = '[?error] missing example from sampler';
 			}
 		}
 
@@ -227,11 +255,11 @@ const generateExample = (content, data) => {
 	return examples;
 };
 
-const genCurl = (doc) => {
-	let command = `curl - X ${doc.method.toUpperCase()} ${doc.path}`;
+const generateCurl = (methodBody) => {
+	let command = `curl - X ${methodBody.method.toUpperCase()} ${methodBody.route}`;
 
-	if (doc.parameters) {
-		let qs = doc.parameters.reduce((acc, prm) => {
+	if (methodBody.parameters) {
+		let qs = methodBody.parameters.reduce((acc, prm) => {
 			if (prm['in'] === 'query') {
 				if (acc.length) acc += '&';
 				acc += `${prm.name}={${prm.name}}`;
@@ -241,8 +269,8 @@ const genCurl = (doc) => {
 		command += `?${qs}`;
 	}
 
-	if (doc.responses) {
-		let firstres = Object.values(doc.responses)[0];
+	if (methodBody.responses) {
+		let firstres = Object.values(methodBody.responses)[0];
 		let accept = firstres?.samples?.[0];
 
 		if (accept?.mediaType) {
@@ -250,9 +278,9 @@ const genCurl = (doc) => {
 		}
 	}
 
-	if (doc?.requestBody?.samples) {
-		command += `\n     - H Content-Type: ${doc.requestBody.samples[0].mediaType}`;
-		command += `\n     - d '${JSON.stringify(doc.requestBody.samples[0].example)}'`;
+	if (methodBody?.requestBody?.samples) {
+		command += `\n     - H Content-Type: ${methodBody.requestBody.samples[0].mediaType}`;
+		command += `\n     - d '${JSON.stringify(methodBody.requestBody.samples[0].example)}'`;
 	}
 
 	return command;
