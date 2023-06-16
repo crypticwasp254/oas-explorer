@@ -2,8 +2,10 @@
 import yaml from 'js-yaml';
 import JsonPointer from 'json-pointer';
 import { sample } from 'openapi-sampler';
-import { Spectral } from '@stoplight/spectral-core';
+import pkg from '@stoplight/spectral-core';
 import { truthy } from '@stoplight/spectral-functions';
+
+const { Spectral } = pkg;
 
 const httpMethods = new Set(['post', 'get', 'put', 'delete', 'options']);
 
