@@ -2,10 +2,11 @@
 	import { goto } from '$app/navigation';
 	import Content from '$identity/content.svelte';
 	import CyxthLogo from '$identity/cyxthLogo.svelte';
-	import { source, specification } from '$components/store';
+	import { source, specification } from '$lib/store';
 
 	import { page } from '$app/stores';
 	import { ensureJson, generateDocs } from '$components/gendoc';
+	import Accordion from '$components/accordion.svelte';
 
 	// spec
 	let specSource = '';
@@ -40,6 +41,7 @@
 			specSource = event.target.result;
 			source.set(specSource);
 			specification.set(generateDocs(ensureJson(specSource)));
+			activeView = 'documentation';
 			goto('/documentation');
 		});
 
@@ -121,20 +123,7 @@
 			</div>
 		{:else if activeView === 'documentation'}
 			<div class="elements">
-				<div class="apiblock doc-side-block">
-					<div class="block-title">routes</div>
-					{#each spec?.tags as tag}
-						<div class="doc-endpoint-tag">
-							{tag.name}
-						</div>
-
-						<div class="doc-endpoints">
-							{#each Array.from(spec?.tags?.mapper?.get(tag.name) || []) as endpoint}
-								<div class="doc-endpoint">{spec?.methodBodies[endpoint].summary}</div>
-							{/each}
-						</div>
-					{/each}
-				</div>
+				<Accordion />
 			</div>
 		{/if}
 	</div>
@@ -276,43 +265,30 @@
 	}
 
 	/// method color
-	.method-post {
-		color: var(--oc-lime-6);
-	}
+	.method {
+		&-post {
+			color: var(--oc-green-6);
+		}
 
-	.method-get {
-		color: var(--oc-violet-6);
-	}
+		&-get {
+			color: var(--oc-blue-6);
+		}
 
-	.method-delete {
-		color: var(--oc-red-6);
-	}
+		&-delete {
+			color: var(--oc-red-6);
+		}
 
-	.method-put {
-		color: var(--oc-blue-6);
-	}
+		&-put {
+			color: var(--oc-lime-6);
+		}
 
-	.method-options {
-		color: var(--oc-pink-6);
+		&-options {
+			color: var(--oc-purple-6);
+		}
 	}
 
 	.http-method {
 		text-transform: uppercase;
-	}
-
-	.doc-side-block {
-		.doc-endpoints {
-			padding-inline-start: 0.5rem;
-			.doc-endpoint-tag {
-				font-size: 1.25rem;
-			}
-			.doc-endpoint {
-				padding-block: 0.125rem;
-				cursor: pointer;
-				user-select: none;
-				color: var(--text2);
-			}
-		}
 	}
 
 	// maindoc

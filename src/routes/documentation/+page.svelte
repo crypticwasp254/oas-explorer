@@ -2,7 +2,7 @@
 	import Codebox from '$components/codebox.svelte';
 	import ParameterTable from '$components/parameterTable.svelte';
 	import ResponseSelector from '$components/responseSelector.svelte';
-	import { specification } from '$components/store';
+	import { specification, tagScrollSync } from '$lib/store';
 	import { onDestroy, onMount } from 'svelte';
 
 	let spec = { tags: [] };
@@ -10,10 +10,6 @@
 	let unsub = specification.subscribe((sp) => {
 		// @ts-ignore
 		spec = sp;
-	});
-
-	onDestroy(() => {
-		unsub();
 	});
 
 	const getEndpoints = (tag) => {
@@ -25,17 +21,53 @@
 			return [];
 		}
 	};
+
+	let observer;
+
+	onMount(() => {
+		observer = new IntersectionObserver(handleIntersection, {
+			root: null,
+			rootMargin: '-30%',
+			threshold: 0
+		});
+
+		const linkers = document.querySelectorAll('.intersect-watch');
+		linkers.forEach((linker) => observer.observe(linker));
+	});
+
+	onDestroy(() => {
+		unsub();
+		if (observer) {
+			observer.disconnect();
+		}
+	});
+
+	const handleIntersection = (entries) => {
+		entries.forEach((entry) => {
+			if (entry.isIntersecting) {
+				let tag = entry.target.dataset['tag'];
+				tagScrollSync.set(tag);
+			}
+		});
+	};
 </script>
 
 <div class="docs">
 	{#each spec.tags as tag}
 		<div class="apinamespace">
-			<h1 class="apitag">{tag.name}</h1>
+			<h1 class="apitag intersect-watch" id="tag-{tag.name}" data-tag={tag.name}>{tag.name}</h1>
 			{#each getEndpoints(tag.name) as endpoint}
 				<div class="apiendpoint">
-					<h3 class="headline5">{endpoint.summary}</h3>
+					<h3
+						class="headline5 intersect-watch"
+						id={endpoint.summary.toLowerCase().replaceAll(' ', '-')}
+						data-tag={tag.name}
+					>
+						{endpoint.summary}
+						<!-- <a href="#{endpoint.summary.toLowerCase().replaceAll(' ', '-')}"> pl</a> -->
+					</h3>
 					<code class="">
-						<span class="http-method method-{endpoint.method}">{endpoint.method}</span>
+						<span class="http-method http-method-{endpoint.method}">{endpoint.method}</span>
 						<span>{endpoint.route}</span>
 					</code>
 					<div class="description">
@@ -82,20 +114,37 @@
 		.apinamespace {
 			padding-block: 1.25rem;
 			max-width: 34rem;
+			scroll-margin-top: 4rem;
 
 			.apitag {
-				font-size: 1.8rem;
+				font-size: 1.6rem;
 				line-height: 1.8rem;
+				text-transform: capitalize;
+				font-weight: 400;
 			}
 
-			h1,
 			h3 {
 				padding-block: 0.875rem;
+				font-size: 1.25rem;
+				font-weight: normal;
+				opacity: 0.8;
+			}
+
+			h1 {
+				scroll-margin-top: 4rem;
 			}
 
 			.apiendpoint {
 				padding-block: 0.175rem;
 				padding-block-end: 1rem;
+
+				h3 {
+					scroll-margin-top: 4rem;
+				}
+
+				h3::first-letter {
+					text-transform: capitalize;
+				}
 
 				.description {
 					padding-block-start: 0.475rem;
@@ -109,6 +158,31 @@
 					font-size: 1rem;
 				}
 			}
+		}
+	}
+
+	.http-method {
+		text-transform: uppercase;
+		font-weight: 500;
+
+		&-post {
+			color: var(--oc-green-6);
+		}
+
+		&-get {
+			color: var(--oc-blue-6);
+		}
+
+		&-delete {
+			color: var(--oc-red-6);
+		}
+
+		&-put {
+			color: var(--oc-lime-6);
+		}
+
+		&-options {
+			color: var(--oc-purple-6);
 		}
 	}
 </style>

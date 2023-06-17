@@ -1,7 +1,7 @@
 <script>
 	import { onMount } from 'svelte';
 	import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
-	import { source, specification } from '$components/store';
+	import { source, specification } from '$lib/store';
 	import { ensureJson, generateDocs, lintDoc } from '$components/gendoc';
 
 	let specSource = '';

@@ -5,4 +5,6 @@ const specification = writable({
     tags: []
 });
 
-export { source, specification };
+const tagScrollSync = writable('');
+
+export { source, specification, tagScrollSync };
