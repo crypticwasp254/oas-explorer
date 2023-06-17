@@ -76,7 +76,7 @@
 
 					<!-- params -->
 					{#if endpoint?.parameters}
-						<h4 class="inner-header">parameter table</h4>
+						<h4 class="inner-header">parameters</h4>
 						<ParameterTable parameters={endpoint.parameters} exclude={['description']} />
 					{/if}
 
@@ -94,7 +94,7 @@
 
 					<!-- responses -->
 					{#if endpoint?.responses}
-						<h4 class="inner-header">Example Responses</h4>
+						<h4 class="inner-header">Responses</h4>
 						<ResponseSelector responses={endpoint.responses} />
 					{/if}
 

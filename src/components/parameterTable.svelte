@@ -8,7 +8,7 @@
 	<thead>
 		<tr>
 			{#each headers as header}
-				<th>{header}</th>
+				<th>{header === 'schema' ? 'type' : header}</th>
 			{/each}
 		</tr>
 	</thead>
@@ -16,7 +16,13 @@
 		{#each parameters as parameter}
 			<tr>
 				{#each headers as header}
-					<td>{parameter[header]}</td>
+					{#if header === 'schema'}
+						<td>
+							{parameter[header]?.['type'] || `ex. "${parameter[header]?.['type']}"` || 'untyped'}
+						</td>
+					{:else}
+						<td>{parameter[header]}</td>
+					{/if}
 				{/each}
 			</tr>
 		{/each}

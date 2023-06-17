@@ -1,5 +1,5 @@
 <script>
-	import { onMount } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
 	import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
 	import { source, specification } from '$lib/store';
 	import { ensureJson, generateDocs, lintDoc } from '$components/gendoc';
@@ -71,24 +71,20 @@
 		});
 	};
 
-	source.subscribe((val) => {
-		// let now = new Date();
+	let unSubscriber = source.subscribe((val) => {
 		if (editor) {
 			lintDoc(val)
 				.then((errs) => {
 					validate(model, errs);
 					if (!errs.length) {
-						specification.set(generateDocs(ensureJson(val)));
+						editGenerate(val);
 					}
 				})
 				.catch((_err) => {
 					console.log('the linter just failed');
-					// ignore and generate
-					specification.set(generateDocs(ensureJson(val)));
+					editGenerate(val);
 				});
 		}
-		// @ts-ignore
-		// console.log('took mses => ', new Date() - now);
 	});
 
 	const validate = (model, lints) => {
@@ -104,6 +100,75 @@
 		});
 
 		Monaco.editor.setModelMarkers(model, 'owner', markers);
+	};
+
+	onDestroy(() => {
+		unSubscriber();
+	});
+
+	let specJson = {};
+
+	// generate specification,docs and tests on edit
+	const editGenerate = (value) => {
+		console.log('edited checking for changes');
+		//TODO check diff and generate only changed parts
+		const valueJson = ensureJson(value);
+		if (specJson) {
+			let changes = getChangePaths(valueJson, specJson);
+			console.log(changes);
+		}
+		// diff with specJson
+		// if there is a diff, update the docs only where the changes took place
+		// generateDocsIrt(valueJson);
+		// update spec json
+		specJson = valueJson;
+		// use this for now
+		specification.set(generateDocs(valueJson));
+	};
+
+	const getChangePaths = (newSpec, oldSpec, path = [], changes = []) => {
+		if (newSpec === null || newSpec === undefined) {
+			return;
+		}
+
+		Object.entries(newSpec).forEach(([key, value]) => {
+			const currentPath = [...path, key];
+			// both in old and new spec -> edited value only
+			if (oldSpec.hasOwnProperty(key)) {
+				if (typeof value === 'string') {
+					if (value && value !== oldSpec[key]) {
+						changes.push({
+							type: 'edit',
+							path: currentPath,
+							value
+						});
+					}
+				} else {
+					getChangePaths(value, oldSpec[key], currentPath, changes);
+				}
+			} else {
+				// in new spec only -> inserted
+				changes.push({
+					type: 'insert',
+					path: currentPath,
+					value
+				});
+			}
+		});
+
+		// in oldspec only -> deleted
+		Object.entries(oldSpec).forEach(([key, value]) => {
+			const currentPath = [...path, key];
+			// ignore this mapper for now
+			if (!newSpec.hasOwnProperty(key) && key !== 'mapper') {
+				changes.push({
+					type: 'deleted',
+					path: currentPath,
+					value: null
+				});
+			}
+		});
+		return changes;
 	};
 </script>
 

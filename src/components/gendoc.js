@@ -2,11 +2,11 @@
 import yaml from 'js-yaml';
 import JsonPointer from 'json-pointer';
 import { sample } from 'openapi-sampler';
-// import pkg from '@stoplight/spectral-core';
+import pkg from '@stoplight/spectral-core';
 import { truthy } from '@stoplight/spectral-functions';
-import { Spectral } from '@stoplight/spectral-core';
+// import { Spectral } from '@stoplight/spectral-core';
 
-// const { Spectral } = pkg;
+const { Spectral } = pkg;
 
 const httpMethods = new Set(['post', 'get', 'put', 'delete', 'options']);
 
@@ -247,7 +247,6 @@ const generateExample = (content, data) => {
 			try {
 				example = sample(value.schema, { skipReadOnly: true }, data);
 			} catch (_e) {
-				console.log('error sampling');
 				example = '[?error] missing example from sampler';
 			}
 		}
@@ -288,3 +287,7 @@ const generateCurl = (methodBody) => {
 
 	return command;
 };
+
+export const generateDocsIrt = (_changes) => {
+	// console.log(changes)
+}

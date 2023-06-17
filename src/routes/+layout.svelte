@@ -138,11 +138,8 @@
 			</div>
 
 			<div class="right-menu">
-				<!-- <div class="docs"> -->
-				<!-- <button on:click={() => (spec = generateDocs(specSource))}>regen</button> -->
-				<!-- </div> -->
 				<div class="btt">
-					<button class="button primary" on:click={uploadSpec}>upload spec</button>
+					<button class="tab" on:click={uploadSpec}>upload</button>
 					<input
 						class="hidden"
 						type="file"
@@ -164,12 +161,12 @@
 		place-items: center;
 	}
 
-	button.primary {
-		background: var(--brand);
-		color: var(--surface1);
-		border-radius: 0.5rem;
-		padding: 0.25rem 0.75rem;
-	}
+	// button.primary {
+	// 	background: var(--brand);
+	// 	color: var(--surface1);
+	// 	border-radius: 0.5rem;
+	// 	padding: 0.25rem 0.75rem;
+	// }
 
 	// sidebar
 	.sidebar {
@@ -310,11 +307,20 @@
 				gap: 1rem;
 			}
 
+			.tab {
+				background: var(--surface2);
+				// border: 0.125rem solid var(--surface2);
+				padding: 0.25rem 1rem;
+				border-radius: 4rem;
+				height: 2.5rem;
+			}
 			.menu {
 				flex-grow: 1;
+				align-items: center;
 
 				.tab.active {
 					color: var(--brand);
+					border-color: var(--brand);
 				}
 			}
 
