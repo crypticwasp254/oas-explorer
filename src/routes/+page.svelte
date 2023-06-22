@@ -180,7 +180,7 @@
 
 <style lang="scss">
 	.designer {
-		height: calc(100vh - 3rem);
+		height: 100vh;
 	}
 
 	.loading-indicator {

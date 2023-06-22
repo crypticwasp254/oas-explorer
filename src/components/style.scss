@@ -1,0 +1,27 @@
+/// method colors
+.method {
+    &-post {
+        color: var(--oc-green-6);
+    }
+
+    &-get {
+        color: var(--oc-blue-6);
+    }
+
+    &-delete {
+        color: var(--oc-red-6);
+    }
+
+    &-put {
+        color: var(--oc-lime-6);
+    }
+
+    &-options {
+        color: var(--oc-purple-6);
+    }
+}
+
+.http-method{
+    text-transform: uppercase;
+    font-weight: 500;
+}

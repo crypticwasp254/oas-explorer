@@ -11,12 +11,30 @@
 		"strict": false,
 		"baseUrl": ".",
 		"paths": {
-			"$identity": ["src/identity"],
-			"$identity/*": ["src/identity/*"],
-			"$components": ["src/components"],
-			"$components/*": ["src/components/*"],
-			"$lib":["./src/lib"],
-  			"$lib/*":["./src/lib/*"]
+			"$icons": [
+				"src/icons"
+			],
+			"$icons/*": [
+				"src/icons/*"
+			],
+			"$identity": [
+				"src/identity"
+			],
+			"$identity/*": [
+				"src/identity/*"
+			],
+			"$components": [
+				"src/components"
+			],
+			"$components/*": [
+				"src/components/*"
+			],
+			"$lib": [
+				"./src/lib"
+			],
+			"$lib/*": [
+				"./src/lib/*"
+			]
 		}
 	}
 	// Path aliases are handled by https://kit.svelte.dev/docs/configuration#alias and https://kit.svelte.dev/docs/configuration#files

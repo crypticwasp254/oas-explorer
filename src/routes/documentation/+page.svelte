@@ -67,7 +67,7 @@
 						<!-- <a href="#{endpoint.summary.toLowerCase().replaceAll(' ', '-')}"> pl</a> -->
 					</h3>
 					<code class="">
-						<span class="http-method http-method-{endpoint.method}">{endpoint.method}</span>
+						<span class="http-method method-{endpoint.method}">{endpoint.method}</span>
 						<span>{endpoint.route}</span>
 					</code>
 					<div class="description">
@@ -158,31 +158,6 @@
 					font-size: 1rem;
 				}
 			}
-		}
-	}
-
-	.http-method {
-		text-transform: uppercase;
-		font-weight: 500;
-
-		&-post {
-			color: var(--oc-green-6);
-		}
-
-		&-get {
-			color: var(--oc-blue-6);
-		}
-
-		&-delete {
-			color: var(--oc-red-6);
-		}
-
-		&-put {
-			color: var(--oc-lime-6);
-		}
-
-		&-options {
-			color: var(--oc-purple-6);
 		}
 	}
 </style>

@@ -1,4 +1,6 @@
 <script>
+	import '$components/style.scss';
+
 	import { goto } from '$app/navigation';
 	import Content from '$identity/content.svelte';
 	import CyxthLogo from '$identity/cyxthLogo.svelte';
@@ -7,6 +9,15 @@
 	import { page } from '$app/stores';
 	import { ensureJson, generateDocs } from '$components/gendoc';
 	import Accordion from '$components/accordion.svelte';
+	import Dialog from '$components/dialog.svelte';
+
+	import OvIcon from '$icons/overview.svelte';
+	import LinkIcon from '$icons/link.svelte';
+	import NewDocIcon from '$icons/newdoc.svelte';
+	import DiskIcon from '$icons/storage.svelte';
+	import BackIcon from '$icons/back.svelte';
+
+	import { getTemplate } from '$components/template';
 
 	// spec
 	let specSource = '';
@@ -18,9 +29,6 @@
 
 	//upload
 	let uploader;
-	const uploadSpec = () => {
-		uploader.click();
-	};
 
 	const fileChanged = (e) => {
 		let file = e.target.files[0];
@@ -37,12 +45,7 @@
 
 		const reader = new FileReader();
 		reader.addEventListener('load', (event) => {
-			// @ts-ignore
-			specSource = event.target.result;
-			source.set(specSource);
-			specification.set(generateDocs(ensureJson(specSource)));
-			activeView = 'documentation';
-			goto('/documentation');
+			setDoc(event.target.result);
 		});
 
 		reader.readAsText(file);
@@ -58,33 +61,81 @@
 		activeView = pth;
 	}
 
-	let views = ['design', 'documentation'];
+	let views = ['design', 'docs', 'test'];
 	const switchView = async (view) => {
 		activeView = view;
 		if (activeView === 'design') {
 			goto('/');
+		} else if (activeView === 'docs') {
+			goto(`/documentation`);
 		} else {
 			goto(`/${view}`);
 		}
+	};
+
+	let dialog;
+	let dialogPane = 'overview';
+
+	let openOptions = [
+		{ name: 'new', icon: NewDocIcon, action: () => (dialogPane = 'new') },
+		//FIXME use link later
+		// { name: 'link', icon: LinkIcon, action: () => (dialogPane = 'link') },
+		{
+			name: 'disk',
+			icon: DiskIcon,
+			action: () => {
+				uploader.click();
+			}
+		}
+	];
+
+	let newApiTitle = '';
+	let newApiVersion = '';
+
+	const createNewSpec = () => {
+		let template = getTemplate(newApiTitle, newApiVersion);
+		setDoc(template);
+	};
+
+	const setDoc = (src) => {
+		specSource = src;
+		source.set(specSource);
+		specification.set(generateDocs(ensureJson(specSource)));
+		activeView = 'docs';
+		goto('/documentation');
+		dialog.close();
 	};
 </script>
 
 <Content>
 	<div class="sidebar" slot="aside">
+		<div class="e-menu">
+			<!-- svelte-ignore a11y-click-events-have-key-events -->
+			<div class="e-menu-item" on:click={() => dialog.showModal()}>
+				<OvIcon />
+			</div>
+			{#each views as tab}
+				<button
+					class="e-menu-item"
+					class:active={activeView === tab}
+					on:click={() => switchView(tab)}
+				>
+					{tab}
+				</button>
+			{/each}
+		</div>
 		<div class="sidebar-header">
 			<div class="lg">
-				<div class="logo">
-					<CyxthLogo />
-				</div>
 				{#if spec.info}
+					<div class="logo">
+						<CyxthLogo />
+					</div>
 					<div class="apiblock">
 						<div class="title">
 							<span> {spec.info.title || 'api title'}</span>
 						</div>
 						<div class="version">{spec.info.version || 'api version'}</div>
 					</div>
-				{:else}
-					<p>OAS designer</p>
 				{/if}
 			</div>
 		</div>
@@ -121,52 +172,95 @@
 					{/each}
 				{/if}
 			</div>
-		{:else if activeView === 'documentation'}
+		{:else if activeView === 'docs'}
 			<div class="elements">
 				<Accordion />
 			</div>
 		{/if}
 	</div>
 	<div class="doc-canvas" slot="main">
-		<div class="header">
-			<div class="menu">
-				{#each views as tab}
-					<button class="tab" class:active={activeView === tab} on:click={() => switchView(tab)}>
-						{tab}
-					</button>
-				{/each}
-			</div>
-
-			<div class="right-menu">
-				<div class="btt">
-					<button class="tab" on:click={uploadSpec}>upload</button>
-					<input
-						class="hidden"
-						type="file"
-						bind:this={uploader}
-						on:change={fileChanged}
-						accept=".yaml, .yml, .json"
-					/>
-				</div>
-			</div>
-		</div>
 		<slot />
 	</div>
 </Content>
 
+<Dialog bind:dialog contentSize="80ch">
+	<div class="dheader" slot="dialog-header">API explorer</div>
+	<div class="dcontent" slot="dialog-body">
+		{#if dialogPane === 'overview'}
+			<div class="p-info">Design, document and test Open API specifications.</div>
+			<h6 class="padtop">open</h6>
+			<div class="open-docs-ctas">
+				{#each openOptions as opt}
+					<!-- svelte-ignore a11y-click-events-have-key-events -->
+					<div class="open-cta" on:click={opt.action}>
+						<div class="icon">
+							<svelte:component this={opt.icon} />
+						</div>
+						<div class="label">{opt.name}</div>
+					</div>
+				{/each}
+			</div>
+			<div class="open-recent-doc">
+				<h6 class="recents-title padtop">recent docs</h6>
+			</div>
+		{:else if dialogPane === 'new' || dialogPane === 'link'}
+			<div class="">
+				<div class="hdr padtop">
+					<button class="goback" on:click={() => (dialogPane = 'overview')}>
+						<BackIcon />
+					</button>
+					<h6>open {dialogPane}</h6>
+				</div>
+				<form on:submit|preventDefault={createNewSpec}>
+					{#if dialogPane === 'link'}
+						<div class="linker">
+							<input type="text" placeholder="link" />
+							<button>load</button>
+						</div>
+					{/if}
+					<input type="text" placeholder="api title" bind:value={newApiTitle} />
+					<input type="text" placeholder="api version" bind:value={newApiVersion} />
+					<button>open</button>
+				</form>
+			</div>
+		{/if}
+		<input
+			class="hidden"
+			type="file"
+			bind:this={uploader}
+			on:change={fileChanged}
+			accept=".yaml, .yml, .json"
+		/>
+	</div>
+</Dialog>
+
 <style lang="scss">
+	.e-menu {
+		padding: 1rem;
+		display: flex;
+		gap: 1rem;
+		height: 3rem;
+		align-items: center;
+		text-transform: capitalize;
+
+		&-item {
+			display: flex;
+			align-items: center;
+			cursor: pointer;
+			border-block-end: 0.125rem solid transparent;
+			text-transform: capitalize;
+
+			&.active {
+				color: var(--brand);
+			}
+		}
+	}
+
 	.btt {
 		height: 100%;
 		display: grid;
 		place-items: center;
 	}
-
-	// button.primary {
-	// 	background: var(--brand);
-	// 	color: var(--surface1);
-	// 	border-radius: 0.5rem;
-	// 	padding: 0.25rem 0.75rem;
-	// }
 
 	// sidebar
 	.sidebar {
@@ -209,9 +303,9 @@
 				font-size: 0.8rem;
 			}
 
-			p {
-				font-size: 1rem;
-			}
+			// p {
+			// 	font-size: 1rem;
+			// }
 		}
 	}
 
@@ -261,72 +355,93 @@
 		}
 	}
 
-	/// method color
-	.method {
-		&-post {
-			color: var(--oc-green-6);
+	.dcontent {
+		min-block-size: min(75vh, 64ch);
+		height: 100%;
+
+		.p-info {
+			color: var(--text2);
 		}
 
-		&-get {
-			color: var(--oc-blue-6);
-		}
-
-		&-delete {
-			color: var(--oc-red-6);
-		}
-
-		&-put {
-			color: var(--oc-lime-6);
-		}
-
-		&-options {
-			color: var(--oc-purple-6);
-		}
-	}
-
-	.http-method {
-		text-transform: uppercase;
-	}
-
-	// maindoc
-	.doc-canvas {
-		.header {
-			height: 3rem;
-			width: 100%;
-			padding-inline: 2rem;
+		.open-docs-ctas {
 			display: flex;
-			position: sticky;
-			top: 0;
-			background: var(--surface1);
-			z-index: 2;
 
-			.menu,
-			.right-menu {
-				height: 100%;
+			gap: 1rem;
+			padding-block: 0.5rem;
+			.open-cta {
+				height: 6rem;
+				width: 8rem;
+				padding: 0.5rem;
+				border-radius: var(--radius);
+				border: 0.125rem solid var(--surface3);
+				cursor: pointer;
 				display: flex;
-				gap: 1rem;
-			}
-
-			.tab {
-				background: var(--surface2);
-				// border: 0.125rem solid var(--surface2);
-				padding: 0.25rem 1rem;
-				border-radius: 4rem;
-				height: 2.5rem;
-			}
-			.menu {
-				flex-grow: 1;
 				align-items: center;
+				gap: 0.25rem;
+				text-transform: capitalize;
+				flex-direction: column;
+				justify-content: center;
 
-				.tab.active {
-					color: var(--brand);
-					border-color: var(--brand);
+				.icon {
+					display: grid;
+					place-items: center;
 				}
 			}
+		}
 
-			button {
-				text-transform: capitalize;
+		h6 {
+			text-transform: uppercase;
+			font-weight: 500;
+			font-size: 0.875rem;
+			color: var(--text2);
+		}
+	}
+
+	form {
+		display: flex;
+		flex-direction: column;
+		max-width: 34ch;
+		gap: 0.5rem;
+
+		.linker {
+			display: flex;
+			justify-content: space-between;
+			gap: 0.5rem;
+
+			input {
+				flex-grow: 1;
 			}
 		}
+
+		input {
+			border: 0.125rem solid var(--surface3);
+			padding: 0.5rem 1rem;
+			border-radius: var(--radius);
+		}
+
+		button {
+			background: var(--brand);
+			color: var(--surface1);
+			border-radius: var(--radius);
+			padding: 0.5rem 1rem;
+		}
+	}
+
+	.hdr {
+		display: flex;
+		gap: 0.5rem;
+		align-items: center;
+		padding-block-end: 1rem;
+
+		button {
+			display: grid;
+			place-items: center;
+
+			padding: 0.5rem;
+		}
+	}
+
+	.padtop {
+		margin-block-start: 1rem;
 	}
 </style>
