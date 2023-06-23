@@ -1,8 +1,8 @@
 <script>
 	import { onDestroy, onMount } from 'svelte';
 	import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
-	import { source, specification } from '$lib/store';
-	import { ensureJson, generateDocs, lintDoc } from '$components/gendoc';
+	import { source, specification, currentDoc, docStore, stateStore } from '$lib/store';
+	import { ensureJson, generateDocs, lintDoc } from '$lib/gendoc';
 
 	let specSource = '';
 
@@ -110,12 +110,12 @@
 
 	// generate specification,docs and tests on edit
 	const editGenerate = (value) => {
-		console.log('edited checking for changes');
 		//TODO check diff and generate only changed parts
 		const valueJson = ensureJson(value);
+		saveOffline(value);
 		if (specJson) {
 			let changes = getChangePaths(valueJson, specJson);
-			console.log(changes);
+			// console.log(changes);
 		}
 		// diff with specJson
 		// if there is a diff, update the docs only where the changes took place
@@ -169,6 +169,24 @@
 			}
 		});
 		return changes;
+	};
+
+	const saveOffline = async (value) => {
+		let cdoc = $currentDoc;
+
+		if (specJson?.info?.title && specJson?.info?.version) {
+			cdoc = `${specJson.info.title}@${specJson.info.version}`;
+		}
+
+		if ($currentDoc != cdoc) {
+			$currentDoc = cdoc;
+		}
+
+		$docStore.setItem(cdoc, value);
+		$stateStore.setItem('last-session', {
+			saved: Date.now(),
+			key: cdoc
+		});
 	};
 </script>
 

@@ -7,4 +7,10 @@ const specification = writable({
 
 const tagScrollSync = writable('');
 
-export { source, specification, tagScrollSync };
+// storage
+// /**@type {import('localforage')} */
+const docStore = writable();
+const stateStore = writable();
+const currentDoc = writable();
+
+export { source, specification, tagScrollSync, docStore, stateStore, currentDoc };

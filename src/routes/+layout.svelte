@@ -2,12 +2,14 @@
 	import '$components/style.scss';
 
 	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
 	import Content from '$identity/content.svelte';
 	import CyxthLogo from '$identity/cyxthLogo.svelte';
-	import { source, specification } from '$lib/store';
+	import { source, specification, docStore, stateStore, currentDoc } from '$lib/store';
 
-	import { page } from '$app/stores';
-	import { ensureJson, generateDocs } from '$components/gendoc';
+	import { ensureJson, generateDocs } from '$lib/gendoc';
+	import { getTemplate } from '$lib/template';
+
 	import Accordion from '$components/accordion.svelte';
 	import Dialog from '$components/dialog.svelte';
 
@@ -17,7 +19,8 @@
 	import DiskIcon from '$icons/storage.svelte';
 	import BackIcon from '$icons/back.svelte';
 
-	import { getTemplate } from '$components/template';
+	import { onMount } from 'svelte';
+	import localforage from 'localforage';
 
 	// spec
 	let specSource = '';
@@ -97,6 +100,17 @@
 		setDoc(template);
 	};
 
+	const openRecent = async (recent) => {
+		try {
+			let src = await $docStore.getItem(`${recent[0]}@${recent[1]}`);
+			if (src) {
+				setDoc(src);
+			}
+		} catch (err) {
+			console.error(err);
+		}
+	};
+
 	const setDoc = (src) => {
 		specSource = src;
 		source.set(specSource);
@@ -104,6 +118,51 @@
 		activeView = 'docs';
 		goto('/documentation');
 		dialog.close();
+		docSave();
+	};
+
+	// let docStore;
+	// let stateStore;
+	const dbName = 'cyxth-oas-explorer';
+	let recents = [];
+
+	onMount(async () => {
+		$docStore = localforage.createInstance({
+			name: dbName,
+			storeName: 'docStore',
+			description: 'store past and recent docs'
+		});
+
+		$stateStore = localforage.createInstance({
+			name: dbName,
+			storeName: 'stateStore',
+			description: 'store state of current doc'
+		});
+
+		try {
+			let lastSave = await $stateStore.getItem('last-session');
+
+			if (!lastSave || Date.now() - lastSave.saved > 900_000) {
+				dialog.showModal();
+			} else {
+				openRecent(lastSave.key.split('@'));
+			}
+		} catch (e) {
+			console.error(e);
+		}
+
+		$docStore.iterate((_, key) => {
+			recents = [...recents, key.split('@')];
+		});
+	});
+
+	// save doc for the fisrt time with with local forage
+	const docSave = () => {
+		// @ts-ignore
+		let info = $specification.info;
+		let key = `${info.title}@${info.version}`;
+		$currentDoc = key;
+		$docStore.setItem(key, specSource);
 	};
 </script>
 
@@ -202,6 +261,15 @@
 			</div>
 			<div class="open-recent-doc">
 				<h6 class="recents-title padtop">recent docs</h6>
+				<div class="recents">
+					{#each recents as recent}
+						<!-- svelte-ignore a11y-click-events-have-key-events -->
+						<div class="recent" on:click={() => openRecent(recent)}>
+							<div class="name">{recent[0]}</div>
+							<div class="version">{recent[1]}</div>
+						</div>
+					{/each}
+				</div>
 			</div>
 		{:else if dialogPane === 'new' || dialogPane === 'link'}
 			<div class="">
@@ -400,7 +468,7 @@
 	form {
 		display: flex;
 		flex-direction: column;
-		max-width: 34ch;
+		max-width: 40ch;
 		gap: 0.5rem;
 
 		.linker {
@@ -443,5 +511,17 @@
 
 	.padtop {
 		margin-block-start: 1rem;
+	}
+
+	.recents {
+		max-width: 40ch;
+		.recent {
+			display: flex;
+			justify-content: space-between;
+			padding-block: 0.5rem;
+			// border: 0.125rem solid var(--surface3);
+			border-radius: var(--radius);
+			cursor: pointer;
+		}
 	}
 </style>

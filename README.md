@@ -1,6 +1,6 @@
 # OpenAPi specification explorer
 
-design, document and test your APIs with this open api specification explorer.  
+Design, document and test your APIs with this open api specification explorer
 
 ## API structure
 
