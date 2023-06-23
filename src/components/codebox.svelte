@@ -1,7 +1,10 @@
 <script>
 	import '$identity/style/prism.css';
 
-	import { highlight, languages } from 'prismjs';
+	import pkg from 'prismjs';
+	const { highlight, languages } = pkg;
+
+	// import { highlight, languages } from 'prismjs';
 	// const { highlight, languages } = pkg;
 
 	// import loadLanguages from 'prismjs/components';
