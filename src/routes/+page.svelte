@@ -2,7 +2,7 @@
 	import { onDestroy, onMount } from 'svelte';
 	import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
 	import { source, specification, currentDoc, docStore, stateStore } from '$lib/store';
-	import { ensureJson, generateDocs, lintDoc } from '$lib/gendoc';
+	import { ensureJson, generateDocs, lintDoc, updateDocs } from '$lib/gendoc';
 
 	let specSource = '';
 
@@ -16,6 +16,8 @@
 
 	let loaded = false;
 
+	let specJson = {};
+
 	onMount(async () => {
 		if (specSource === '') {
 			specSource = $source;
@@ -26,6 +28,7 @@
 		}
 		await loadMonaco();
 		loaded = true;
+		specJson = ensureJson(specSource);
 	});
 
 	const loadMonaco = async () => {
@@ -106,24 +109,23 @@
 		unSubscriber();
 	});
 
-	let specJson = {};
-
 	// generate specification,docs and tests on edit
 	const editGenerate = (value) => {
 		//TODO check diff and generate only changed parts
 		const valueJson = ensureJson(value);
 		saveOffline(value);
+		let changes = [];
 		if (specJson) {
-			let changes = getChangePaths(valueJson, specJson);
-			// console.log(changes);
+			changes = getChangePaths(valueJson, specJson);
 		}
-		// diff with specJson
-		// if there is a diff, update the docs only where the changes took place
-		// generateDocsIrt(valueJson);
 		// update spec json
 		specJson = valueJson;
+
 		// use this for now
-		specification.set(generateDocs(valueJson));
+		if (changes.length) {
+			let updated = updateDocs(valueJson, $specification, changes);
+			specification.set(updated);
+		}
 	};
 
 	const getChangePaths = (newSpec, oldSpec, path = [], changes = []) => {

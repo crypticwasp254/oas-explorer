@@ -2,9 +2,8 @@
 import yaml from 'js-yaml';
 import JsonPointer from 'json-pointer';
 import { sample } from 'openapi-sampler';
-import pkg from '@stoplight/spectral-core';
+import * as pkg from '@stoplight/spectral-core';
 import { truthy } from '@stoplight/spectral-functions';
-// import { Spectral } from '@stoplight/spectral-core';
 
 const { Spectral } = pkg;
 
@@ -36,18 +35,21 @@ export const ensureJson = (specSource, fileType = 'application/x-yaml') => {
 	}
 }
 
-export const generateDocs = (data) => {
+export const generateDocs = (data, spec = null) => {
 	data = data === null || data === undefined ? "" : data
 
-	let spec = {
-		openapi: '3.0.0',
-		info: undefined,
-		servers: [],
-		tags: [],
-		paths: [],
-		components: [],
-		methodBodies: []
-	};
+	if (spec === null) {
+		spec = {
+			openapi: '3.0.0',
+			info: undefined,
+			servers: [],
+			tags: [],
+			paths: [],
+			components: [],
+			methodBodies: []
+		};
+	}
+
 
 	// info
 	if (data.info) {
@@ -59,7 +61,7 @@ export const generateDocs = (data) => {
 		spec.servers = data.servers
 	}
 
-	//FIXME placeholder tags
+	//FIXME update tags
 	let tagMap = new Map();
 	if (data.tags) {
 		spec.tags = data.tags
@@ -70,6 +72,7 @@ export const generateDocs = (data) => {
 
 	// paths
 	if (data.paths && typeof (data.paths) === 'object') {
+		let methodsBodies = [];
 		let lpaths = Object.keys(data.paths).map((route) => {
 			let operations = data.paths[route];
 
@@ -85,18 +88,7 @@ export const generateDocs = (data) => {
 					if (httpMethods.has(method)) {
 						routeMethods.push(method);
 						const methodBody = createMethodBody(route, method, methodbody, data, routeParameters);
-
-						// FIXME find better ways to do this
-						methodBody.tags.forEach(tag => {
-							if (tagMap.has(tag)) {
-								tagMap.get(tag).add(spec.methodBodies.length);
-							} else {
-								spec.tags.push({ name: tag })
-								tagMap.set(tag, new Set([spec.methodBodies.length]))
-							}
-						})
-
-						spec.methodBodies.push(methodBody);
+						methodsBodies.push(methodBody)
 					}
 				})
 
@@ -114,7 +106,25 @@ export const generateDocs = (data) => {
 			}
 		})
 
+		// paths
 		spec.paths = lpaths
+
+		// update tags
+		methodsBodies.forEach((methodBody, idx) => {
+			methodBody.tags.forEach(tag => {
+				if (tagMap.has(tag)) {
+					tagMap.get(tag).add(idx);
+				} else {
+					if (!spec.tags.filter(tg => tg.name === tag)) {
+						spec.tags.push({ name: tag })
+					}
+					tagMap.set(tag, new Set([idx]))
+				}
+			})
+		})
+
+		// update method bodies
+		spec.methodBodies = methodsBodies
 		// @ts-ignore
 		spec.tags.mapper = tagMap;
 	}
@@ -140,11 +150,11 @@ const createMethodBody = (route, method, methodData, spec, topLevelRouteParamete
 		summary: methodData?.summary || '[?error] missing method summary',
 		description: methodData?.description || '[?error] missing description',
 		tags: new Set([]),
-
+		curl: undefined,
+		// TODO extract these to map individualy
 		parameters: undefined,
 		requestBody: undefined,
 		responses: undefined,
-		curl: undefined
 	}
 
 	if (!methodData) {
@@ -288,6 +298,27 @@ const generateCurl = (methodBody) => {
 	return command;
 };
 
-export const generateDocsIrt = (_changes) => {
-	// console.log(changes)
+export const updateDocs = (editorValue, spec, changes) => {
+	let docupdates = {};
+	changes.forEach(change => {
+		// test with upper level objects only for now
+		let key = change.path[0];
+
+		//FIXME updating one path is better than updating all paths smh
+		// if (key === "paths") {
+		// 	const route = change.path[1];
+		// 	let updated = editorValue?.[key]?.[route];
+		// 	if (updated) {
+		// 		// add or modify
+		// 		console.log(change)
+		// 	}else{
+		// 		// remove | delete
+		// 	}
+		// }
+
+		docupdates[key] = editorValue[key]
+	})
+
+	let updates = generateDocs(docupdates, spec)
+	return updates
 }
